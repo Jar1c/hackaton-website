@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SupportTrack | Sign Up</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --maroon: #6B1A1A;
+            --maroon-dark: #4A1010;
+            --maroon-light: #8B2E2E;
+            --maroon-pale: #F9F0F0;
+            --text: #1a1a1a;
+            --muted: #6b6b6b;
+            --border: #e4d4d4;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--maroon-pale);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+            background-image: 
+                radial-gradient(ellipse at 20% 50%, rgba(107,26,26,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(107,26,26,0.06) 0%, transparent 50%);
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 20px;
+            width: 460px;
+            padding: 48px 44px;
+            box-shadow: 0 8px 40px rgba(107,26,26,0.10), 0 1px 3px rgba(107,26,26,0.05);
+            border: 1px solid var(--border);
+            animation: fadeUp 0.5s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .brand-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            background: var(--maroon);
+            border-radius: 13px;
+            margin-bottom: 12px;
+        }
+
+        .brand-logo svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--white);
+        }
+
+        .brand h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            color: var(--maroon-dark);
+        }
+
+        .brand h1 span { color: var(--maroon-light); }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .section-sub {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 28px;
+        }
+
+        .form-group { margin-bottom: 14px; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        input[type="email"],
+        input[type="password"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 11px 13px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: #faf8f8;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            appearance: none;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b1a1a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+            cursor: pointer;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--maroon);
+            box-shadow: 0 0 0 3px rgba(107,26,26,0.08);
+            background: var(--white);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 13px;
+            background: var(--maroon);
+            color: var(--white);
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 6px;
+        }
+
+        .btn-primary:hover { background: var(--maroon-dark); }
+        .btn-primary:active { transform: scale(0.99); }
+
+        .footer-text {
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 20px;
+        }
+
+        .footer-text a {
+            color: var(--maroon);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .footer-text a:hover { text-decoration: underline; }
+
+        #msg {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 14px;
+            min-height: 20px;
+            border-radius: 8px;
+            padding: 0;
+        }
+
+        #msg.error { color: #c0392b; background: #fdf0f0; padding: 10px; }
+        #msg.success { color: #1a6b3a; background: #f0fdf5; padding: 10px; }
+        #msg.loading { color: var(--maroon); }
+
+        .divider { height: 1px; background: var(--border); margin: 24px 0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/>
+                </svg>
+            </div>
+            <h1>Support<span>Track</span></h1>
+        </div>
+
+        <p class="section-title">Create an account</p>
+        <p class="section-sub">Join the student concern system</p>
+
+        <form id="signupForm">
+            <div class="form-row">
+                <div>
+                    <label>First Name</label>
+                    <input type="text" id="firstname" placeholder="Juan" required />
+                </div>
+                <div>
+                    <label>Last Name</label>
+                    <input type="text" id="lastname" placeholder="dela Cruz" required />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="you@school.edu.ph" required />
+            </div>
+
+            <div class="form-group">
+                <label>Student ID</label>
+                <input type="text" id="student_id" placeholder="2022-04-54845" required />
+            </div>
+
+            <div class="form-group">
+                <label>College / Program</label>
+                <select id="program" required>
+                    <option value="" disabled selected>Select your college</option>
+                    <option value="BSIT">College of Computer Studies</option>
+                    <option value="BSBA">College of Business Administration</option>
+                    <option value="BSED">College of Education</option>
+                    <option value="BSA">College of Accountancy</option>
+                    <option value="BSE">College of Enteprenuership</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required />
+            </div>
+
+            <button type="submit" class="btn-primary">Create Account</button>
+        </form>
+
+        <p id="msg"></p>
+
+        <div class="divider"></div>
+
+        <p class="footer-text">
+            Already have an account? <a href="/">Sign in</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById("signupForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const firstname = document.getElementById("firstname").value;
+            const lastname = document.getElementById("lastname").value;
+            const student_id = document.getElementById("student_id").value;
+            const program = document.getElementById("program").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const msgEl = document.getElementById("msg");
+
+            msgEl.className = "loading";
+            msgEl.innerText = "Creating your account…";
+
+            try {
+                const res = await fetch("/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ firstname, lastname, student_id, program, email, password })
+                });
+                const data = await res.json();
+                msgEl.innerText = data.message;
+                if (data.status === "success") {
+                    msgEl.className = "success";
+                    document.getElementById("signupForm").reset();
+                } else {
+                    msgEl.className = "error";
+                }
+            } catch {
+                msgEl.className = "error";
+                msgEl.innerText = "Server error. Please try again.";
+            }
+        });
+    </script>
+</body>
+</html>

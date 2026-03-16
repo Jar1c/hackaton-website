@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SupportTrack | Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        maroon: { DEFAULT: '#6B1A1A', dark: '#4A1010', light: '#8B2E2E', pale: '#F9F0F0' },
+                        text: '#1a1a1a', muted: '#6b6b6b', border: '#e4d4d4',
+                        success: { DEFAULT: '#1a6b3a', bg: '#f0fdf5', border: '#b7e8cc' },
+                        warning: { DEFAULT: '#92610a', bg: '#fffbeb', border: '#f0d8a0' },
+                        info: { DEFAULT: '#1a4a6b', bg: '#f0f7fd', border: '#b8d8f0' },
+                        error: { DEFAULT: '#c0392b', bg: '#fdf0f0', border: '#f5b7b1' },
+                        escalated: { DEFAULT: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' }
+                    },
+                    fontFamily: {
+                        sans: ['"DM Sans"', 'sans-serif'],
+                        serif: ['"Playfair Display"', 'serif'],
+                    },
+                    animation: {
+                        fadeUp: 'fadeUp 0.4s ease both',
+                        modalIn: 'modalIn 0.25s ease both',
+                        dropIn: 'dropIn 0.15s ease both',
+                    },
+                    keyframes: {
+                        fadeUp: { '0%': { opacity: '0', transform: 'translateY(12px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        modalIn: { '0%': { opacity: '0', transform: 'scale(0.96) translateY(10px)' }, '100%': { opacity: '1', transform: 'scale(1) translateY(0)' } },
+                        dropIn: { '0%': { opacity: '0', transform: 'translateY(-6px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .sidebar-link.active { @apply bg-maroon-pale text-maroon font-semibold; }
+            .sidebar-link.active svg { @apply opacity-100; }
+            .tab-panel { @apply hidden; }
+            .tab-panel.active { @apply block; }
+            .badge { @apply inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide whitespace-nowrap; }
+            .badge-routed    { @apply bg-info-bg text-info border border-info-border; }
+            .badge-read      { @apply bg-purple-50 text-purple-700 border border-purple-200; }
+            .badge-screened  { @apply bg-orange-50 text-orange-700 border border-orange-200; }
+            .badge-progress  { @apply bg-warning-bg text-warning border border-warning-border; }
+            .badge-resolved  { @apply bg-success-bg text-success border border-success-border; }
+            .badge-escalated { @apply bg-escalated-bg text-escalated border border-escalated-border; }
+            .badge-closed    { @apply bg-gray-100 text-gray-600 border border-gray-300; }
+            .badge-academic  { @apply bg-indigo-50 text-indigo-700 border border-indigo-200; }
+            .badge-financial { @apply bg-warning-bg text-warning border border-warning-border; }
+            .badge-technical { @apply bg-gray-100 text-gray-800 border border-gray-300; }
+            .badge-welfare   { @apply bg-success-bg text-success border border-success-border; }
+            .loading-row td  { @apply text-center p-10 text-muted italic text-[13px]; }
+            .toast.show      { @apply opacity-100 translate-y-0 pointer-events-auto; }
+            .modal-overlay.open { @apply flex; }
+            .export-dropdown.open { @apply block; }
+            .sla-warn { @apply bg-warning-bg border-l-4 border-warning text-warning; }
+            .sla-breach { @apply bg-escalated-bg border-l-4 border-escalated text-escalated; }
+        }
+    </style>
+</head>
+<body class="bg-maroon-pale min-h-screen flex flex-col font-sans text-text">
+
+<nav class="bg-maroon-dark px-8 h-[58px] flex items-center justify-between sticky top-0 z-50 shadow-[0_2px_16px_rgba(74,16,16,0.25)]">
+    <a class="font-serif text-[20px] text-white no-underline" href="#">
+        Support<span class="text-[#e8a0a0]">Track</span>
+        <span class="text-[13px] font-sans font-normal opacity-60 ml-1.5">Admin</span>
+    </a>
+    <div class="flex items-center gap-4">
+        <span class="bg-white/10 text-[#fde8e8] border border-white/20 rounded-full px-3.5 py-1 text-[12px] font-semibold tracking-wide" id="nav-admin-name">Loading...</span>
+        <a href="/admin/logout" class="text-[13px] font-semibold text-[#fde8e8] px-3.5 py-1.5 border-[1.5px] border-white/25 rounded-lg transition-colors hover:bg-white/10">Logout</a>
+    </div>
+</nav>
+
+<div class="flex flex-1">
+    <aside class="w-[220px] bg-white border-r border-border py-7 shrink-0 sticky top-[58px] h-[calc(100vh-58px)] overflow-y-auto hidden md:block">
+        <div class="px-4 mb-6">
+            <p class="text-[10px] font-bold tracking-widest uppercase text-[#bba8a8] px-2 mb-1.5">Overview</p>
+            <button class="sidebar-link active w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="showTab('concerns', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                All Concerns
+            </button>
+            <button class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="showTab('metrics', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Metrics & SLA
+            </button>
+            <button class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="showTab('audit', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Audit Log
+            </button>
+            <button class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="showTab('users', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Students
+            </button>
+        </div>
+
+        <div class="px-4 mb-6" id="settingsMenu" style="display:none;">
+            <p class="text-[10px] font-bold tracking-widest uppercase text-[#bba8a8] px-2 mb-1.5">Settings</p>
+            <button class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="showTab('admins', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>
+                Manage Admins
+            </button>
+        </div>
+
+        <div class="px-4">
+            <p class="text-[10px] font-bold tracking-widest uppercase text-[#bba8a8] px-2 mb-1.5">Filter by Dept</p>
+            <button id="filter-btn-registrar" class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="filterByDept('Registrar / Dean\'s Office', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Registrar / Dean's
+            </button>
+            <button id="filter-btn-accounting" class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="filterByDept('Accounting Department', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Accounting / Cashier
+            </button>
+            <button id="filter-btn-mis" class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="filterByDept('MIS Department', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                MIS Department
+            </button>
+            <button id="filter-btn-osa" class="sidebar-link w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium text-muted hover:bg-maroon-pale hover:text-maroon transition-colors text-left group" onclick="filterByDept('OSA', this)">
+                <svg class="w-4 h-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                OSA
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-6 md:p-9 overflow-y-auto w-full">
+
+        <!-- STAT CARDS -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="bg-white rounded-2xl p-5 border border-border shadow-[0_2px_12px_rgba(107,26,26,0.05)] animate-fadeUp col-span-1" style="animation-delay:0.05s">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2.5">Total</p>
+                <p class="font-serif text-[32px] text-maroon-dark leading-none mb-1" id="stat-total">—</p>
+                <p class="text-[12px] text-muted">All time</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-border shadow-[0_2px_12px_rgba(107,26,26,0.05)] animate-fadeUp" style="animation-delay:0.08s">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2.5">Routed</p>
+                <p class="font-serif text-[32px] text-info leading-none mb-1" id="stat-routed">—</p>
+                <p class="text-[12px] text-muted flex items-center"><span class="w-2 h-2 rounded-full bg-[#4a90c4] mr-1.5"></span>Pending</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-border shadow-[0_2px_12px_rgba(107,26,26,0.05)] animate-fadeUp" style="animation-delay:0.11s">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2.5">In Progress</p>
+                <p class="font-serif text-[32px] text-warning leading-none mb-1" id="stat-progress">—</p>
+                <p class="text-[12px] text-muted flex items-center"><span class="w-2 h-2 rounded-full bg-orange-400 mr-1.5"></span>Read/Screened</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-border shadow-[0_2px_12px_rgba(107,26,26,0.05)] animate-fadeUp" style="animation-delay:0.14s">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2.5">Resolved</p>
+                <p class="font-serif text-[32px] text-success leading-none mb-1" id="stat-resolved">—</p>
+                <p class="text-[12px] text-muted flex items-center"><span class="w-2 h-2 rounded-full bg-[#2ecc71] mr-1.5"></span>Done</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-border shadow-[0_2px_12px_rgba(107,26,26,0.05)] animate-fadeUp" style="animation-delay:0.17s">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2.5">Escalated</p>
+                <p class="font-serif text-[32px] text-escalated leading-none mb-1" id="stat-escalated">—</p>
+                <p class="text-[12px] text-muted flex items-center"><span class="w-2 h-2 rounded-full bg-purple-500 mr-1.5"></span>SLA breach</p>
+            </div>
+        </div>
+
+        <!-- SLA ALERT BANNER (shown if escalated > 0) -->
+        <div id="sla-banner" class="hidden mb-6 px-5 py-4 bg-escalated-bg border border-escalated-border rounded-xl text-[13px] text-escalated font-semibold flex items-center gap-3 animate-fadeUp">
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span id="sla-banner-text">Some concerns have been auto-escalated due to SLA violations.</span>
+        </div>
+
+        <!-- CONCERNS TAB -->
+        <div id="tab-concerns" class="tab-panel active">
+            <div class="bg-white rounded-2xl border border-border shadow-[0_2px_16px_rgba(107,26,26,0.05)] mb-7 animate-fadeUp overflow-hidden" style="animation-delay:0.25s;">
+                <div class="px-7 py-5 border-b border-border flex flex-wrap items-center justify-between gap-3">
+                    <h3 class="font-serif text-[17px] text-maroon-dark">Concerns</h3>
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <input type="text" class="px-3 py-1.5 border-[1.5px] border-border rounded-lg text-[13px] text-text bg-[#faf8f8] outline-none w-[200px] focus:border-maroon transition-colors" placeholder="Search ID or student…" id="searchInput" oninput="applyFilters()">
+                        <select class="px-3 py-1.5 border-[1.5px] border-border rounded-lg text-[13px] text-text bg-[#faf8f8] outline-none cursor-pointer appearance-none pr-7 focus:border-maroon transition-colors" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'7\' viewBox=\'0 0 10 7\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%236b1a1a\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 10px center;" id="filterStatus" onchange="applyFilters()">
+                            <option value="">All Status</option>
+                            <option value="Routed">Routed</option>
+                            <option value="Read">Read</option>
+                            <option value="Screened">Screened</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Escalated">Escalated</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                        <select class="px-3 py-1.5 border-[1.5px] border-border rounded-lg text-[13px] text-text bg-[#faf8f8] outline-none cursor-pointer appearance-none pr-7 focus:border-maroon transition-colors" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'7\' viewBox=\'0 0 10 7\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%236b1a1a\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 10px center;" id="filterCategory" onchange="applyFilters()">
+                            <option value="">All Categories</option>
+                            <option value="Academic">Academic</option>
+                            <option value="Financial">Financial</option>
+                            <option value="Technical Support">Technical Support</option>
+                            <option value="Student Welfare">Student Welfare</option>
+                        </select>
+                        <div class="relative inline-block" id="exportWrapper">
+                            <button class="flex items-center gap-1.5 px-3.5 py-1.5 bg-maroon text-white border-none rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-maroon-dark transition-colors whitespace-nowrap" onclick="toggleExportMenu()">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Export
+                                <svg class="w-2.5 h-2.5 ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div class="export-dropdown hidden absolute top-[calc(100%+6px)] right-0 bg-white border border-border rounded-xl shadow-[0_8px_24px_rgba(107,26,26,0.12)] min-w-[170px] z-[100] overflow-hidden animate-dropIn" id="exportDropdown">
+                                <button class="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium text-text cursor-pointer hover:bg-maroon-pale hover:text-maroon transition-colors text-left" onclick="exportPDF()">
+                                    <svg class="w-[15px] h-[15px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    Export as PDF
+                                    <span class="ml-auto text-[10px] font-bold tracking-[0.06em] px-2 py-0.5 rounded-[10px] bg-[#fdf0f0] text-error border border-[#f5b7b1]">PDF</span>
+                                </button>
+                                <div class="h-px bg-border my-1"></div>
+                                <button class="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium text-text cursor-pointer hover:bg-maroon-pale hover:text-maroon transition-colors text-left" onclick="exportCSV()">
+                                    <svg class="w-[15px] h-[15px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                    Export as CSV
+                                    <span class="ml-auto text-[10px] font-bold tracking-[0.06em] px-2 py-0.5 rounded-[10px] bg-[#f0fdf5] text-success border border-[#b7e8cc]">CSV</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-0 overflow-x-auto">
+                    <table class="w-full border-collapse text-[13px]">
+                        <thead>
+                            <tr>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">Tracking ID</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">Student ID</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">Category</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">Routed To</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">Status</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">SLA</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">Submitted</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border whitespace-nowrap">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="concernsTableBody" class="[&>tr]:border-b [&>tr]:border-[#f3eaea] [&>tr]:transition-colors hover:[&>tr]:bg-[#fdf7f7] last:[&>tr]:border-none [&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:text-text [&>tr>td]:align-middle">
+                            <tr class="loading-row"><td colspan="8">Loading concerns…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- METRICS TAB -->
+        <div id="tab-metrics" class="tab-panel">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-2xl p-5 border border-border shadow-sm animate-fadeUp">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2">Avg Response Time</p>
+                    <p class="font-serif text-[28px] text-maroon-dark leading-none mb-1" id="m-avg-response">—</p>
+                    <p class="text-[12px] text-muted">Hours to first read</p>
+                </div>
+                <div class="bg-white rounded-2xl p-5 border border-border shadow-sm animate-fadeUp" style="animation-delay:0.05s">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2">Avg Resolution Time</p>
+                    <p class="font-serif text-[28px] text-maroon-dark leading-none mb-1" id="m-avg-resolution">—</p>
+                    <p class="text-[12px] text-muted">Hours to resolve</p>
+                </div>
+                <div class="bg-white rounded-2xl p-5 border border-border shadow-sm animate-fadeUp" style="animation-delay:0.1s">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2">Escalation Rate</p>
+                    <p class="font-serif text-[28px] leading-none mb-1" id="m-escalation-rate" style="color:#7c3aed">—</p>
+                    <p class="text-[12px] text-muted">Target: &lt;10%</p>
+                </div>
+                <div class="bg-white rounded-2xl p-5 border border-border shadow-sm animate-fadeUp" style="animation-delay:0.15s">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted mb-2">Resolution Rate</p>
+                    <p class="font-serif text-[28px] text-success leading-none mb-1" id="m-resolution-rate">—</p>
+                    <p class="text-[12px] text-muted">Of total concerns</p>
+                </div>
+            </div>
+
+            <!-- SLA Rules Info -->
+            <div class="bg-white rounded-2xl border border-border shadow-sm p-6 mb-6 animate-fadeUp">
+                <h3 class="font-serif text-[16px] text-maroon-dark mb-4">SLA Rules (Auto-Enforcement)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-start gap-3 p-4 bg-warning-bg border border-warning-border rounded-xl">
+                        <svg class="w-5 h-5 text-warning shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <div>
+                            <p class="text-[13px] font-bold text-warning mb-1">Rule 1: 2-Day Read SLA</p>
+                            <p class="text-[12px] text-muted">If a concern stays in <strong>Routed</strong> status for more than 2 days without being Read, it is automatically escalated.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 p-4 bg-escalated-bg border border-escalated-border rounded-xl">
+                        <svg class="w-5 h-5 text-escalated shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                            <p class="text-[13px] font-bold text-escalated mb-1">Rule 2: 5-Day Screening SLA</p>
+                            <p class="text-[12px] text-muted">If a concern stays in <strong>Read</strong> status for more than 5 days without being Screened, it is automatically escalated.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- By Department -->
+                <div class="bg-white rounded-2xl border border-border shadow-sm p-6 animate-fadeUp">
+                    <h3 class="font-serif text-[16px] text-maroon-dark mb-4">By Department</h3>
+                    <div id="m-by-dept" class="space-y-3">
+                        <p class="text-[13px] text-muted italic">Loading…</p>
+                    </div>
+                </div>
+
+                <!-- By Category -->
+                <div class="bg-white rounded-2xl border border-border shadow-sm p-6 animate-fadeUp">
+                    <h3 class="font-serif text-[16px] text-maroon-dark mb-4">By Category</h3>
+                    <div id="m-by-cat" class="space-y-3">
+                        <p class="text-[13px] text-muted italic">Loading…</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- By Status -->
+                <div class="bg-white rounded-2xl border border-border shadow-sm p-6 animate-fadeUp">
+                    <h3 class="font-serif text-[16px] text-maroon-dark mb-4">By Status</h3>
+                    <div id="m-by-status" class="space-y-3">
+                        <p class="text-[13px] text-muted italic">Loading…</p>
+                    </div>
+                </div>
+
+                <!-- Daily Submissions -->
+                <div class="bg-white rounded-2xl border border-border shadow-sm p-6 animate-fadeUp">
+                    <h3 class="font-serif text-[16px] text-maroon-dark mb-4">Daily Submissions (Last 7 Days)</h3>
+                    <div id="m-daily" class="space-y-2">
+                        <p class="text-[13px] text-muted italic">Loading…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AUDIT TAB -->
+        <div id="tab-audit" class="tab-panel">
+            <div class="bg-white rounded-2xl border border-border shadow-[0_2px_16px_rgba(107,26,26,0.05)] mb-7">
+                <div class="px-7 py-5 border-b border-border">
+                    <h3 class="font-serif text-[17px] text-maroon-dark">Audit Log</h3>
+                </div>
+                <div class="p-0">
+                    <ul class="list-none" id="auditList">
+                        <li class="p-10 text-center text-muted italic text-[13px]">Loading audit log…</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- USERS TAB -->
+        <div id="tab-users" class="tab-panel">
+            <div class="bg-white rounded-2xl border border-border shadow-[0_2px_16px_rgba(107,26,26,0.05)] mb-7">
+                <div class="px-7 py-5 border-b border-border">
+                    <h3 class="font-serif text-[17px] text-maroon-dark">Registered Students</h3>
+                </div>
+                <div class="p-0 overflow-x-auto">
+                    <table class="w-full border-collapse text-[13px]">
+                        <thead>
+                            <tr>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Student ID</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Full Name</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Program</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Email</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Registered</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" class="[&>tr]:border-b [&>tr]:border-[#f3eaea] [&>tr]:transition-colors hover:[&>tr]:bg-[#fdf7f7] last:[&>tr]:border-none [&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:text-text [&>tr>td]:align-middle">
+                            <tr class="loading-row"><td colspan="5">Loading students…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMINS TAB -->
+        <div id="tab-admins" class="tab-panel">
+            <div class="bg-white rounded-2xl border border-border shadow-[0_2px_16px_rgba(107,26,26,0.05)] mb-7">
+                <div class="px-7 py-5 border-b border-border flex justify-between items-center">
+                    <h3 class="font-serif text-[17px] text-maroon-dark">Manage Department Admins</h3>
+                    <button class="px-4 py-2 bg-maroon text-white rounded-lg text-[13px] font-semibold hover:bg-maroon-dark" onclick="openAddAdminModal()">+ Add New Admin</button>
+                </div>
+                <div class="p-6">
+                    <table class="w-full border-collapse text-[13px] border border-border rounded-lg overflow-hidden">
+                        <thead>
+                            <tr>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Username</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Email</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Role</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Department</th>
+                                <th class="px-5 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted bg-[#faf8f8] border-b border-border">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminsTableBody" class="[&>tr]:border-b [&>tr]:border-[#f3eaea] [&>tr]:transition-colors hover:[&>tr]:bg-[#fdf7f7] last:[&>tr]:border-none [&>tr>td]:px-5 [&>tr>td]:py-3 [&>tr>td]:text-text">
+                            <tr class="loading-row"><td colspan="5">Loading admins…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- VIEW/UPDATE CONCERN MODAL -->
+<div class="modal-overlay hidden fixed inset-0 bg-[#4a101059] backdrop-blur-[3px] z-[500] items-center justify-center" id="modalOverlay" onclick="closeModalOutside(event)">
+    <div class="bg-white rounded-[18px] w-[540px] max-w-[95vw] max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(74,16,16,0.25)] animate-modalIn" id="modalBox">
+        <div class="px-7 pt-6 pb-4 border-b border-border flex justify-between items-start">
+            <div>
+                <p class="font-serif text-[19px] text-maroon-dark" id="modalTitle">Concern Details</p>
+                <p class="text-[12px] text-muted mt-1" id="modalSubtitle"></p>
+            </div>
+            <button class="bg-transparent border-none cursor-pointer text-muted text-[20px] leading-none px-1.5 py-0.5 rounded-md hover:bg-maroon-pale hover:text-maroon" onclick="closeModal()">✕</button>
+        </div>
+        <!-- SLA warning inside modal -->
+        <div id="modalSlaBanner" class="hidden mx-7 mt-4 px-4 py-3 rounded-xl text-[12.5px] font-semibold"></div>
+        <div class="px-7 py-6" id="modalBody"></div>
+        <!-- Status workflow stepper -->
+        <div class="px-7 pb-4">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-muted mb-2">Status Workflow</p>
+            <div class="flex items-center gap-1 flex-wrap" id="statusStepper"></div>
+        </div>
+        <div class="px-7 pt-3 pb-6 flex gap-2.5 items-center">
+            <select class="flex-1 px-3.5 py-2.5 border-[1.5px] border-border rounded-lg text-[13px] text-text bg-[#faf8f8] outline-none appearance-none pr-[30px] focus:border-maroon transition-colors" style="background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'7\' viewBox=\'0 0 10 7\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%236b1a1a\' stroke-width=\'1.5\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;" id="statusSelect">
+                <option value="Routed">Routed</option>
+                <option value="Read">Read</option>
+                <option value="Screened">Screened</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Escalated">Escalated</option>
+                <option value="Closed">Closed</option>
+            </select>
+            <button class="px-5 py-2.5 bg-maroon text-white border-none rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-maroon-dark transition-colors whitespace-nowrap" onclick="updateStatus()">Update Status</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADD ADMIN MODAL -->
+<div class="modal-overlay hidden fixed inset-0 bg-[#4a101059] backdrop-blur-[3px] z-[500] items-center justify-center" id="addAdminModalOverlay">
+    <div class="bg-white rounded-[18px] w-[450px] max-w-[95vw] shadow-[0_20px_60px_rgba(74,16,16,0.25)] animate-modalIn">
+        <div class="px-7 pt-6 pb-4 border-b border-border flex justify-between items-center">
+            <p class="font-serif text-[19px] text-maroon-dark">Add New Admin</p>
+            <button class="bg-transparent border-none cursor-pointer text-muted text-[20px] leading-none hover:text-maroon" onclick="closeAddAdminModal()">✕</button>
+        </div>
+        <form id="addAdminForm" class="px-7 py-6 flex flex-col gap-4">
+            <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Admin Username</label><input type="text" id="newAdminUser" required class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"></div>
+            <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Email Address</label><input type="email" id="newAdminEmail" required class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"></div>
+            <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Password</label><input type="password" id="newAdminPass" required class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Role</label><select id="newAdminRole" class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"><option value="admin">Dept Admin</option><option value="superadmin">Super Admin</option></select></div>
+                <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Department</label><select id="newAdminDept" class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"><option value="Registrar / Dean's Office">Registrar / Dean's</option><option value="Accounting Department">Accounting</option><option value="MIS Department">MIS</option><option value="OSA">OSA</option><option value="ALL">ALL (Superadmin)</option></select></div>
+            </div>
+            <button type="submit" class="w-full mt-2 px-5 py-2.5 bg-maroon text-white border-none rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-maroon-dark transition-colors">Create Account</button>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT ADMIN MODAL -->
+<div class="modal-overlay hidden fixed inset-0 bg-[#4a101059] backdrop-blur-[3px] z-[500] items-center justify-center" id="editAdminModalOverlay">
+    <div class="bg-white rounded-[18px] w-[450px] max-w-[95vw] shadow-[0_20px_60px_rgba(74,16,16,0.25)] animate-modalIn">
+        <div class="px-7 pt-6 pb-4 border-b border-border flex justify-between items-center">
+            <p class="font-serif text-[19px] text-maroon-dark">Edit Admin Account</p>
+            <button class="bg-transparent border-none cursor-pointer text-muted text-[20px] leading-none hover:text-maroon" onclick="closeEditAdminModal()">✕</button>
+        </div>
+        <form id="editAdminForm" class="px-7 py-6 flex flex-col gap-4">
+            <input type="hidden" id="editAdminId">
+            <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Admin Username</label><input type="text" id="editAdminUser" required class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"></div>
+            <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Email Address</label><input type="email" id="editAdminEmail" required class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"></div>
+            <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">New Password (leave blank to keep)</label><input type="password" id="editAdminPass" placeholder="Optional" class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Role</label><select id="editAdminRole" class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"><option value="admin">Dept Admin</option><option value="superadmin">Super Admin</option></select></div>
+                <div><label class="block text-[11px] font-bold uppercase tracking-wider text-muted mb-1.5">Department</label><select id="editAdminDept" class="w-full px-3 py-2 border-[1.5px] border-border rounded-lg text-[13px] outline-none focus:border-maroon"><option value="Registrar / Dean's Office">Registrar / Dean's</option><option value="Accounting Department">Accounting</option><option value="MIS Department">MIS</option><option value="OSA">OSA</option><option value="ALL">ALL (Superadmin)</option></select></div>
+            </div>
+            <button type="submit" class="w-full mt-2 px-5 py-2.5 bg-maroon text-white border-none rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-maroon-dark transition-colors">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<div class="toast fixed bottom-7 right-7 bg-maroon-dark text-white px-5 py-3 rounded-xl text-[13px] font-medium shadow-[0_4px_20px_rgba(74,16,16,0.3)] z-[999] opacity-0 translate-y-2.5 transition-all duration-300 pointer-events-none" id="toast"></div>
+
+<script>
+    let allConcerns      = [];
+    let filteredConcerns = [];
+    let currentConcernId = null;
+    let deptFilter       = null;
+
+    const adminName = localStorage.getItem('admin_username');
+    const adminDept = localStorage.getItem('admin_dept');
+
+    if (adminDept && adminDept !== 'ALL') {
+        document.getElementById('nav-admin-name').innerText = adminDept;
+        if (adminDept !== "Registrar / Dean's Office") document.getElementById('filter-btn-registrar').style.display = 'none';
+        if (adminDept !== "Accounting Department")     document.getElementById('filter-btn-accounting').style.display = 'none';
+        if (adminDept !== "MIS Department")            document.getElementById('filter-btn-mis').style.display = 'none';
+        if (adminDept !== "OSA")                       document.getElementById('filter-btn-osa').style.display = 'none';
+    } else if (adminName) {
+        document.getElementById('nav-admin-name').innerText = adminName === 'admin' ? 'Super Admin' : adminName;
+    }
+
+    const adminRole = localStorage.getItem('admin_role');
+    if (adminRole === 'superadmin') {
+        document.getElementById('settingsMenu').style.display = 'block';
+    }
+
+    // ── EXPORT ──
+    function toggleExportMenu() { document.getElementById('exportDropdown').classList.toggle('open'); }
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('exportWrapper').contains(e.target))
+            document.getElementById('exportDropdown').classList.remove('open');
+    });
+
+    function exportCSV() {
+        document.getElementById('exportDropdown').classList.remove('open');
+        const data = filteredConcerns.length ? filteredConcerns : allConcerns;
+        if (!data.length) { showToast('No data to export.'); return; }
+        const headers = ['Tracking ID','Student ID','Category','Routed To','Status','SLA Status','Submitted'];
+        const rows = data.map(c => [
+            c.id, c.is_anonymous ? 'Anonymous' : (c.student_id || ''),
+            c.category, c.assigned_dept || '', c.status, getSlaStatus(c), formatDatePlain(c.created_at)
+        ]);
+        const csvContent = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = `supporttrack_concerns_${today()}.csv`; a.click();
+        URL.revokeObjectURL(url);
+        showToast('CSV exported successfully!');
+    }
+
+    function exportPDF() {
+        document.getElementById('exportDropdown').classList.remove('open');
+        const data = filteredConcerns.length ? filteredConcerns : allConcerns;
+        if (!data.length) { showToast('No data to export.'); return; }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        doc.setFillColor(74, 16, 16);
+        doc.rect(0, 0, 297, 20, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+        doc.text('SupportTrack — Concerns Report', 14, 13);
+        doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+        doc.text(`Generated: ${formatDatePlain(new Date().toISOString())}`, 230, 13);
+        doc.autoTable({
+            startY: 26,
+            head: [['Tracking ID','Student ID','Category','Routed To','Status','SLA','Submitted']],
+            body: data.map(c => [c.id, c.is_anonymous ? 'Anonymous' : (c.student_id || '—'), c.category, c.assigned_dept || '—', c.status, getSlaStatus(c), formatDatePlain(c.created_at)]),
+            headStyles: { fillColor: [107,26,26], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+            bodyStyles: { fontSize: 9, textColor: [30,30,30] },
+            alternateRowStyles: { fillColor: [253,245,245] },
+            margin: { left: 14, right: 14 },
+        });
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150);
+            doc.text(`Page ${i} of ${pageCount}`, 14, doc.internal.pageSize.height - 8);
+        }
+        doc.save(`supporttrack_concerns_${today()}.pdf`);
+        showToast('PDF exported successfully!');
+    }
+
+    // ── TABS ──
+    function showTab(name, el) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        if (el) el.classList.add('active');
+        if (name === 'audit')   loadAuditLog();
+        if (name === 'users')   loadUsers();
+        if (name === 'admins')  loadAdmins();
+        if (name === 'metrics') loadMetrics();
+    }
+
+    // ── CONCERNS ──
+    async function loadConcerns() {
+        try {
+            const res  = await fetch('/admin/concerns');
+            const data = await res.json();
+            allConcerns      = data.concerns || [];
+            filteredConcerns = [];
+            updateStats(allConcerns);
+            renderConcerns(allConcerns);
+        } catch {
+            document.getElementById('concernsTableBody').innerHTML = '<tr class="loading-row"><td colspan="8">Failed to load. Check your connection.</td></tr>';
+        }
+    }
+
+    function updateStats(concerns) {
+        document.getElementById('stat-total').innerText     = concerns.length;
+        document.getElementById('stat-routed').innerText    = concerns.filter(c => c.status === 'Routed').length;
+        document.getElementById('stat-progress').innerText  = concerns.filter(c => c.status === 'Read' || c.status === 'Screened').length;
+        document.getElementById('stat-resolved').innerText  = concerns.filter(c => c.status === 'Resolved').length;
+        const esc = concerns.filter(c => c.status === 'Escalated').length;
+        document.getElementById('stat-escalated').innerText = esc;
+        if (esc > 0) {
+            document.getElementById('sla-banner').classList.remove('hidden');
+            document.getElementById('sla-banner-text').innerText = `${esc} concern${esc!==1?'s':''} auto-escalated due to SLA violations. Please review immediately.`;
+        }
+    }
+
+    // SLA badge logic
+    function getSlaStatus(c) {
+        if (c.status === 'Resolved' || c.status === 'Closed' || c.status === 'Escalated') return c.status === 'Escalated' ? 'Breached' : 'OK';
+        const now = Date.now();
+        const created = new Date(c.created_at).getTime();
+        const hoursElapsed = (now - created) / (1000 * 3600);
+        if (c.status === 'Routed') {
+            if (hoursElapsed >= 48)  return 'Breached';
+            if (hoursElapsed >= 36)  return 'At Risk';
+        }
+        if (c.status === 'Read') {
+            if (hoursElapsed >= 120) return 'Breached';
+            if (hoursElapsed >= 96)  return 'At Risk';
+        }
+        return 'OK';
+    }
+
+    function slaBadge(c) {
+        const s = getSlaStatus(c);
+        if (s === 'OK')       return '<span class="badge bg-success-bg text-success border border-success-border">✓ OK</span>';
+        if (s === 'At Risk')  return '<span class="badge badge-progress">⚡ At Risk</span>';
+        if (s === 'Breached') return '<span class="badge badge-escalated">⚠ Breached</span>';
+        return '<span class="badge badge-resolved">✓ Done</span>';
+    }
+
+    function renderConcerns(concerns) {
+        filteredConcerns = concerns;
+        const tbody = document.getElementById('concernsTableBody');
+        if (!concerns.length) {
+            tbody.innerHTML = '<tr><td colspan="8"><div class="text-center py-12 px-6 text-muted"><p class="text-[14px]">No concerns found.</p></div></td></tr>';
+            return;
+        }
+        tbody.innerHTML = concerns.map(c => `
+            <tr>
+                <td><span class="font-sans font-semibold text-maroon text-[13px]">${c.id}</span></td>
+                <td>${c.is_anonymous ? '<em class="text-muted text-[12px]">Anonymous</em>' : (c.student_id || '—')}</td>
+                <td>${categoryBadge(c.category)}</td>
+                <td class="text-muted text-[12px]">${c.assigned_dept || '—'}</td>
+                <td>${statusBadge(c.status)}</td>
+                <td>${slaBadge(c)}</td>
+                <td class="text-muted text-[12px]">${formatDate(c.created_at)}</td>
+                <td><button class="px-3 py-1.5 rounded-lg font-sans text-[12px] font-semibold cursor-pointer border-[1.5px] transition-all text-maroon border-border bg-white hover:bg-maroon-pale hover:border-maroon" onclick="openModal('${c.id}')">View</button></td>
+            </tr>
+        `).join('');
+    }
+
+    function applyFilters() {
+        const search   = document.getElementById('searchInput').value.toLowerCase();
+        const status   = document.getElementById('filterStatus').value;
+        const category = document.getElementById('filterCategory').value;
+        const filtered = allConcerns.filter(c => {
+            const matchSearch   = !search   || c.id.toLowerCase().includes(search) || (c.student_id || '').toLowerCase().includes(search);
+            const matchStatus   = !status   || c.status === status;
+            const matchCategory = !category || c.category === category;
+            const matchDept     = !deptFilter || c.assigned_dept === deptFilter;
+            return matchSearch && matchStatus && matchCategory && matchDept;
+        });
+        renderConcerns(filtered);
+    }
+
+    function filterByDept(dept, el) {
+        deptFilter = dept;
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        if (el) el.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-concerns').classList.add('active');
+        applyFilters();
+    }
+
+    // ── MODAL ──
+    const WORKFLOW = ['Routed','Read','Screened','Resolved','Escalated','Closed'];
+
+    async function openModal(id) {
+        const c = allConcerns.find(x => x.id === id);
+        if (!c) return;
+        currentConcernId = id;
+
+        document.getElementById('modalTitle').innerText    = 'Concern ' + c.id;
+        document.getElementById('modalSubtitle').innerText = 'Submitted ' + formatDate(c.created_at);
+        document.getElementById('statusSelect').value      = c.status;
+        document.getElementById('modalBody').innerHTML     = `<p class="text-muted text-[13px] text-center p-5">Loading details…</p>`;
+        document.getElementById('modalOverlay').classList.add('open');
+
+        // SLA banner inside modal
+        const slaStatus  = getSlaStatus(c);
+        const slaBanner  = document.getElementById('modalSlaBanner');
+        if (slaStatus === 'At Risk') {
+            slaBanner.className  = 'mx-7 mt-4 px-4 py-3 rounded-xl text-[12.5px] font-semibold sla-warn';
+            slaBanner.innerText  = '⚡ SLA At Risk — This concern is approaching the deadline. Please act soon.';
+            slaBanner.classList.remove('hidden');
+        } else if (slaStatus === 'Breached') {
+            slaBanner.className  = 'mx-7 mt-4 px-4 py-3 rounded-xl text-[12.5px] font-semibold sla-breach';
+            slaBanner.innerText  = '⚠ SLA Breached — This concern has exceeded the allowed response window.';
+            slaBanner.classList.remove('hidden');
+        } else {
+            slaBanner.classList.add('hidden');
+        }
+
+        // Status stepper
+        const stepperEl = document.getElementById('statusStepper');
+        const stepIdx   = WORKFLOW.indexOf(c.status);
+        stepperEl.innerHTML = WORKFLOW.map((step, i) => {
+            const isPast    = i < stepIdx;
+            const isCurrent = i === stepIdx;
+            const color = isCurrent ? 'bg-maroon text-white' : isPast ? 'bg-success-bg text-success border border-success-border' : 'bg-gray-100 text-gray-400';
+            return `<span class="badge text-[10px] px-2 py-0.5 ${color}">${isPast ? '✓ ' : ''}${step}</span>${i < WORKFLOW.length-1 ? '<span class="text-muted text-xs">›</span>' : ''}`;
+        }).join('');
+
+        let fullName = '—';
+        if (!c.is_anonymous && c.student_id) {
+            try {
+                const res  = await fetch(`/admin/student_info/${c.student_id}`);
+                const data = await res.json();
+                fullName = data.full_name || '—';
+            } catch { fullName = '—'; }
+        }
+
+        const timestamps = [
+            c.routed_at   ? `<div class="flex gap-3 mb-2"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px]">Routed At</span><span class="text-[13px]">${formatDate(c.routed_at)}</span></div>` : '',
+            c.read_at     ? `<div class="flex gap-3 mb-2"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px]">Read At</span><span class="text-[13px]">${formatDate(c.read_at)}</span></div>` : '',
+            c.screened_at ? `<div class="flex gap-3 mb-2"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px]">Screened At</span><span class="text-[13px]">${formatDate(c.screened_at)}</span></div>` : '',
+            c.resolved_at ? `<div class="flex gap-3 mb-2"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px]">Resolved At</span><span class="text-[13px]">${formatDate(c.resolved_at)}</span></div>` : '',
+            c.escalated_at ? `<div class="flex gap-3 mb-2"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px]">Escalated At</span><span class="text-[13px] text-escalated font-semibold">${formatDate(c.escalated_at)}</span></div>` : '',
+            c.escalation_reason ? `<div class="flex gap-3 mb-2"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px]">Reason</span><span class="text-[13px] text-escalated">${c.escalation_reason}</span></div>` : '',
+        ].filter(Boolean).join('');
+
+        document.getElementById('modalBody').innerHTML = `
+            <div class="flex gap-3 mb-3"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Category</span><span>${categoryBadge(c.category)}</span></div>
+            <div class="flex gap-3 mb-3"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Student ID</span><span class="text-[14px]">${c.is_anonymous ? '<em class="text-muted">Anonymous</em>' : (c.student_id || '—')}</span></div>
+            <div class="flex gap-3 mb-3"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Full Name</span><span class="text-[14px]">${c.is_anonymous ? '<em class="text-muted">Anonymous</em>' : fullName}</span></div>
+            <div class="flex gap-3 mb-3"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Program</span><span class="text-[14px]">${c.program || '—'}</span></div>
+            <div class="flex gap-3 mb-3"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Routed To</span><span class="text-[14px]">${c.assigned_dept || '—'}</span></div>
+            <div class="flex gap-3 mb-3"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Status</span><span>${statusBadge(c.status)}</span></div>
+            ${timestamps ? `<div class="h-px bg-border my-3"></div><p class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted mb-2">Timestamps</p>${timestamps}` : ''}
+            <div class="h-px bg-border my-3"></div>
+            <div class="flex gap-3 mb-3"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Description</span><span class="text-[14px] flex-1 leading-relaxed whitespace-pre-wrap">${c.description || '—'}</span></div>
+            ${c.attachment_path ? `<div class="h-px bg-border my-3"></div><div class="flex gap-3 mb-2"><span class="text-[10.5px] font-bold uppercase tracking-[0.07em] text-muted min-w-[120px] pt-0.5">Attachment</span><a href="${c.attachment_path}" target="_blank" class="text-maroon font-semibold text-[13px]">View File ↗</a></div>` : ''}
+        `;
+    }
+
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+    function closeModalOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+    async function updateStatus() {
+        const newStatus = document.getElementById('statusSelect').value;
+        try {
+            const res  = await fetch('/admin/update_status', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ concern_id: currentConcernId, status: newStatus })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                const idx = allConcerns.findIndex(c => c.id === currentConcernId);
+                if (idx > -1) allConcerns[idx].status = newStatus;
+                updateStats(allConcerns);
+                applyFilters();
+                closeModal();
+                showToast('Status updated to "' + newStatus + '"');
+            } else {
+                showToast('Error: ' + data.message);
+            }
+        } catch { showToast('Server error. Please try again.'); }
+    }
+
+    // ── AUDIT LOG ──
+    async function loadAuditLog() {
+        const list = document.getElementById('auditList');
+        list.innerHTML = '<li class="p-10 text-center text-muted italic text-[13px]">Loading…</li>';
+        try {
+            const res  = await fetch('/admin/audit_logs');
+            const data = await res.json();
+            const logs = data.logs || [];
+            if (!logs.length) { list.innerHTML = '<li class="p-10 text-center text-muted italic text-[13px]">No audit logs yet.</li>'; return; }
+            list.innerHTML = logs.map(l => `
+                <li class="flex gap-3.5 px-5 py-3.5 border-b border-[#f3eaea] text-[13px] last:border-none">
+                    <span class="w-2 h-2 rounded-full ${l.actor && l.actor.startsWith('System') ? 'bg-purple-500' : 'bg-maroon-light'} shrink-0 mt-1.5"></span>
+                    <div>
+                        <p class="text-[13px] text-text">${l.action}</p>
+                        <p class="text-muted text-[11.5px] mt-1">Actor: <strong>${l.actor}</strong> &nbsp;·&nbsp; ${formatDate(l.created_at)}</p>
+                    </div>
+                </li>
+            `).join('');
+        } catch { list.innerHTML = '<li class="p-6 text-center text-error text-[13px]">Failed to load audit log.</li>'; }
+    }
+
+    // ── USERS ──
+    async function loadUsers() {
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '<tr class="loading-row"><td colspan="5">Loading…</td></tr>';
+        try {
+            const res  = await fetch('/admin/students');
+            const data = await res.json();
+            const users = data.students || [];
+            if (!users.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="text-center py-12 px-6 text-muted">No students registered yet.</div></td></tr>'; return; }
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td><span class="font-semibold text-maroon text-[13px]">${u.student_id || '—'}</span></td>
+                    <td>${(u.first_name || '') + ' ' + (u.last_name || '')}</td>
+                    <td>${u.program || '—'}</td>
+                    <td class="text-muted text-[12px]">${u.email || '—'}</td>
+                    <td class="text-muted text-[12px]">${formatDate(u.created_at)}</td>
+                </tr>
+            `).join('');
+        } catch { tbody.innerHTML = '<tr class="loading-row"><td colspan="5">Failed to load students.</td></tr>'; }
+    }
+
+    // ── METRICS ──
+    async function loadMetrics() {
+        try {
+            const res  = await fetch('/admin/metrics');
+            const data = await res.json();
+            if (data.status !== 'success') return;
+            const m = data.metrics;
+
+            document.getElementById('m-avg-response').innerText    = m.avg_response_time_hours ? m.avg_response_time_hours + 'h' : 'N/A';
+            document.getElementById('m-avg-resolution').innerText  = m.avg_resolution_time_hours ? m.avg_resolution_time_hours + 'h' : 'N/A';
+            const escRate = m.escalation_rate;
+            const rateEl  = document.getElementById('m-escalation-rate');
+            rateEl.innerText = escRate + '%';
+            rateEl.style.color = escRate >= 10 ? '#c0392b' : escRate >= 5 ? '#92610a' : '#1a6b3a';
+
+            const resolvedRate = m.total ? Math.round((m.resolved / m.total) * 100) : 0;
+            document.getElementById('m-resolution-rate').innerText = resolvedRate + '%';
+
+            // By dept
+            const deptEl = document.getElementById('m-by-dept');
+            if (!Object.keys(m.by_dept).length) { deptEl.innerHTML = '<p class="text-[13px] text-muted italic">No data.</p>'; }
+            else {
+                deptEl.innerHTML = Object.entries(m.by_dept).map(([dept, stats]) => {
+                    const pct = Math.round((stats.resolved / stats.total) * 100) || 0;
+                    return `<div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[12px] font-semibold text-text truncate max-w-[160px]">${dept}</span>
+                            <span class="text-[11px] text-muted">${stats.resolved}/${stats.total} resolved</span>
+                        </div>
+                        <div class="h-2 bg-[#f3eaea] rounded-full overflow-hidden">
+                            <div class="h-full bg-maroon rounded-full transition-all" style="width:${pct}%"></div>
+                        </div>
+                        ${stats.escalated > 0 ? `<p class="text-[11px] text-escalated mt-0.5 font-medium">⚠ ${stats.escalated} escalated</p>` : ''}
+                    </div>`;
+                }).join('');
+            }
+
+            // By category
+            const catEl = document.getElementById('m-by-cat');
+            const maxCat = Math.max(...Object.values(m.by_category));
+            catEl.innerHTML = Object.entries(m.by_category).map(([cat, count]) => `
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[12px] font-semibold text-text">${cat}</span>
+                        <span class="text-[11px] text-muted">${count}</span>
+                    </div>
+                    <div class="h-2 bg-[#f3eaea] rounded-full overflow-hidden">
+                        <div class="h-full bg-info rounded-full" style="width:${Math.round((count/maxCat)*100)}%"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            // By status
+            const statusColors = {'Routed':'#4a90c4','Read':'#7c3aed','Screened':'#f59e0b','Resolved':'#1a6b3a','Escalated':'#7c3aed','Closed':'#666'};
+            const statusEl = document.getElementById('m-by-status');
+            const total    = Object.values(m.by_status).reduce((a,b)=>a+b,0);
+            statusEl.innerHTML = Object.entries(m.by_status).map(([status, count]) => {
+                const pct = total ? Math.round((count/total)*100) : 0;
+                return `<div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="flex items-center gap-1.5 text-[12px] font-semibold text-text">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${statusColors[status]||'#999'}"></span>
+                            ${status}
+                        </span>
+                        <span class="text-[11px] text-muted">${count} (${pct}%)</span>
+                    </div>
+                    <div class="h-2 bg-[#f3eaea] rounded-full overflow-hidden">
+                        <div class="h-full rounded-full" style="width:${pct}%;background:${statusColors[status]||'#999'}"></div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Daily submissions
+            const dailyEl  = document.getElementById('m-daily');
+            const maxDaily = Math.max(...m.daily_submissions.map(d=>d.count), 1);
+            dailyEl.innerHTML = m.daily_submissions.map(d => `
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] text-muted w-20 shrink-0">${d.date.slice(5)}</span>
+                    <div class="flex-1 h-5 bg-[#f3eaea] rounded overflow-hidden">
+                        <div class="h-full bg-maroon rounded transition-all" style="width:${Math.round((d.count/maxDaily)*100)}%"></div>
+                    </div>
+                    <span class="text-[11px] font-semibold text-maroon w-5 shrink-0">${d.count}</span>
+                </div>
+            `).join('');
+
+        } catch (e) { console.error('Metrics error:', e); }
+    }
+
+    // ── ADMINS ──
+    async function loadAdmins() {
+        const tbody = document.getElementById('adminsTableBody');
+        tbody.innerHTML = '<tr class="loading-row"><td colspan="5">Loading…</td></tr>';
+        try {
+            const res  = await fetch('/admin/get_admins');
+            const data = await res.json();
+            if (data.status === 'success') {
+                const admins = data.admins || [];
+                tbody.innerHTML = admins.map(a => {
+                    let actionBtns = '';
+                    if (a.username === 'admin') {
+                        actionBtns = `<span class="text-muted text-[12px] font-semibold cursor-not-allowed">Locked</span>`;
+                    } else {
+                        let safeDept = (a.assigned_dept || '').replace(/'/g, "\\'");
+                        let safeUser = (a.username || '').replace(/'/g, "\\'");
+                        actionBtns = `
+                            <button class="text-maroon hover:underline text-[12px] font-semibold mr-3" onclick="openEditAdminModal('${a.id}','${safeUser}','${a.email}','${a.role}','${safeDept}')">Edit</button>
+                            <button class="text-error hover:underline text-[12px] font-semibold" onclick="deleteAdmin('${a.id}','${safeUser}')">Delete</button>
+                        `;
+                    }
+                    return `<tr>
+                        <td class="font-semibold text-maroon">${a.username}</td>
+                        <td class="text-muted">${a.email}</td>
+                        <td><span class="badge ${a.role==='superadmin'?'bg-purple-100 text-purple-700 border-purple-200':'bg-blue-100 text-blue-700 border-blue-200'}">${a.role==='superadmin'?'Super Admin':'Dept Admin'}</span></td>
+                        <td class="text-muted font-medium">${a.assigned_dept}</td>
+                        <td>${actionBtns}</td>
+                    </tr>`;
+                }).join('');
+            } else { tbody.innerHTML = `<tr><td colspan="5" class="text-center p-5 text-error">${data.message}</td></tr>`; }
+        } catch { tbody.innerHTML = '<tr class="loading-row"><td colspan="5">Failed to load admins.</td></tr>'; }
+    }
+
+    function openAddAdminModal()  { document.getElementById('addAdminModalOverlay').classList.remove('hidden'); document.getElementById('addAdminModalOverlay').classList.add('flex'); }
+    function closeAddAdminModal() { document.getElementById('addAdminModalOverlay').classList.add('hidden'); document.getElementById('addAdminModalOverlay').classList.remove('flex'); }
+
+    document.getElementById('addAdminForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            username: document.getElementById('newAdminUser').value,
+            full_name: document.getElementById('newAdminUser').value,
+            email: document.getElementById('newAdminEmail').value,
+            password: document.getElementById('newAdminPass').value,
+            role: document.getElementById('newAdminRole').value,
+            assigned_dept: document.getElementById('newAdminDept').value,
+        };
+        try {
+            const res  = await fetch('/admin/add_admin', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+            const data = await res.json();
+            if (data.status==='success') { showToast(data.message); closeAddAdminModal(); loadAdmins(); document.getElementById('addAdminForm').reset(); }
+            else showToast(data.message);
+        } catch { showToast('Error creating admin account.'); }
+    });
+
+    function openEditAdminModal(id, username, email, role, dept) {
+        document.getElementById('editAdminId').value    = id;
+        document.getElementById('editAdminUser').value  = username;
+        document.getElementById('editAdminEmail').value = email;
+        document.getElementById('editAdminRole').value  = role;
+        document.getElementById('editAdminDept').value  = dept;
+        document.getElementById('editAdminPass').value  = '';
+        document.getElementById('editAdminModalOverlay').classList.remove('hidden');
+        document.getElementById('editAdminModalOverlay').classList.add('flex');
+    }
+    function closeEditAdminModal() {
+        document.getElementById('editAdminModalOverlay').classList.add('hidden');
+        document.getElementById('editAdminModalOverlay').classList.remove('flex');
+    }
+    document.getElementById('editAdminForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const payload = {
+            id: document.getElementById('editAdminId').value,
+            username: document.getElementById('editAdminUser').value,
+            email: document.getElementById('editAdminEmail').value,
+            password: document.getElementById('editAdminPass').value,
+            role: document.getElementById('editAdminRole').value,
+            assigned_dept: document.getElementById('editAdminDept').value,
+        };
+        try {
+            const res  = await fetch('/admin/update_admin', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+            const data = await res.json();
+            showToast(data.message);
+            if (data.status==='success') { closeEditAdminModal(); loadAdmins(); }
+        } catch { showToast('Error updating admin account.'); }
+    });
+
+    async function deleteAdmin(id, username) {
+        if (!confirm(`Are you sure you want to delete '${username}'? This cannot be undone.`)) return;
+        try {
+            const res  = await fetch(`/admin/delete_admin/${id}`, { method:'DELETE' });
+            const data = await res.json();
+            showToast(data.message);
+            if (data.status==='success') loadAdmins();
+        } catch { showToast('Error deleting admin account.'); }
+    }
+
+    // ── HELPERS ──
+    function statusBadge(status) {
+        const map = { 'Routed':'badge-routed','Read':'badge-read','Screened':'badge-screened','In Progress':'badge-progress','Resolved':'badge-resolved','Escalated':'badge-escalated','Closed':'badge-closed' };
+        return `<span class="badge ${map[status]||'badge-routed'}">${status}</span>`;
+    }
+    function categoryBadge(cat) {
+        const map = { 'Academic':'badge-academic','Financial':'badge-financial','Student Welfare':'badge-welfare','Facilities & Welfare':'badge-welfare','Technical Support':'badge-technical' };
+        return `<span class="badge ${map[cat]||''}">${cat}</span>`;
+    }
+    function formatDate(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+    }
+    function formatDatePlain(iso) {
+        if (!iso) return '';
+        return new Date(iso).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+    }
+    function today() { return new Date().toISOString().slice(0,10); }
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    loadConcerns();
+</script>
+</body>
+</html>

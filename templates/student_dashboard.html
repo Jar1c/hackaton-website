@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SupportTrack | Student Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { maroon: { DEFAULT:'#6B1A1A',dark:'#4A1010',light:'#8B2E2E',pale:'#F9F0F0',faint:'#FDF5F5' } },
+                    fontFamily: { sans:['DM Sans','sans-serif'], serif:['Playfair Display','serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-image: radial-gradient(ellipse at 10% 80%,rgba(107,26,26,0.07) 0%,transparent 55%), radial-gradient(ellipse at 90% 10%,rgba(107,26,26,0.05) 0%,transparent 45%); }
+        @keyframes fadeUp  { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes dropIn  { from{opacity:0;transform:translateY(-6px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .anim-fadeup { animation: fadeUp 0.35s ease both; }
+        .anim-dropin { animation: dropIn 0.18s ease both; }
+        select { -webkit-appearance:none; appearance:none;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b1a1a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat:no-repeat; background-position:right 14px center; padding-right:38px; }
+        .avatar-img  { display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:9999px; }
+        .has-photo .avatar-img  { display:block; }
+        .has-photo .avatar-init { display:none; }
+        .cam-overlay { position:absolute; inset:0; border-radius:9999px; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s; }
+        .pd-avatar:hover .cam-overlay { opacity:1; }
+        select:focus, textarea:focus, input:focus { outline:none; border-color:#6B1A1A; box-shadow:0 0 0 3px rgba(107,26,26,0.08); background:white; }
+        .sidebar-trans { transition: width 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .sidebar-label { transition: opacity 0.2s, width 0.2s; white-space: nowrap; overflow: hidden; }
+        .sidebar-item-text { transition: opacity 0.2s; white-space: nowrap; overflow: hidden; }
+        #sidebar { overflow-x: hidden; }
+        .board-clamp3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+        .board-clamp4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+        .ccount-ok  { color: #1a6b3a; }
+        .ccount-warn { color: #92610a; }
+        .ccount-err { color: #c0392b; }
+        #removePhotoBtn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+        #photoOptionsPanel { display: none; }
+        #photoOptionsPanel.open { display: block; }
+        #sidebarLogo { transition: opacity 0.2s, max-width 0.3s; overflow: hidden; white-space: nowrap; }
+        #chatMessages::-webkit-scrollbar { width: 6px; }
+        #chatMessages::-webkit-scrollbar-thumb { background-color: #e4d4d4; border-radius: 10px; }
+        #notifList::-webkit-scrollbar { width: 4px; }
+        #notifList::-webkit-scrollbar-thumb { background-color: #e4d4d4; border-radius: 10px; }
+        /* Red dot pulse animation */
+        @keyframes notifPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+        #notifDot { animation: notifPulse 2s ease-in-out infinite; }
+    </style>
+</head>
+<body class="font-sans bg-maroon-pale min-h-screen">
+
+<input type="file" id="photoInput" accept="image/*" class="hidden">
+<input type="hidden" id="student_id">
+<input type="hidden" id="program">
+
+<div id="toast" class="fixed bottom-7 left-1/2 -translate-x-1/2 translate-y-3 bg-maroon-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-lg z-50 opacity-0 transition-all duration-300 pointer-events-none whitespace-nowrap"></div>
+
+<!-- GLOBAL AI MODAL -->
+<div class="modal-overlay hidden fixed inset-0 bg-[#4a101059] backdrop-blur-[3px] z-[600] items-center justify-center" id="globalAiModal" onclick="closeAiModalOutside(event)">
+    <div class="bg-white rounded-[20px] w-[420px] max-w-[95vw] h-[600px] max-h-[90vh] shadow-[0_20px_60px_rgba(74,16,16,0.3)] flex flex-col" id="globalAiBox">
+        <div class="bg-gradient-to-r from-maroon-dark to-maroon px-6 py-4 flex justify-between items-center rounded-t-[20px] flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/30">
+                    <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7v4h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-4a7 7 0 0 1 7-7h1V5.73A2 2 0 1 1 12 2z"/><path d="M12 22a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2z"/></svg>
+                </div>
+                <div>
+                    <h3 class="font-serif text-[18px] text-white leading-tight">Global AI ✨</h3>
+                    <p class="text-[11px] text-white/70 font-medium">GRC Support Assistant</p>
+                </div>
+            </div>
+            <button class="bg-transparent border-none cursor-pointer text-white/70 hover:text-white transition-colors" onclick="closeGlobalAi()">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div id="chatMessages" class="flex-1 p-5 overflow-y-auto bg-[#faf8f8] flex flex-col gap-4">
+            <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-maroon-pale border border-maroon-light flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="w-4 h-4 text-maroon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7v4h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-4a7 7 0 0 1 7-7h1V5.73A2 2 0 1 1 12 2z"/></svg>
+                </div>
+                <div class="bg-white border border-[#e4d4d4] p-3.5 rounded-2xl rounded-tl-sm text-[13px] text-[#1a1a1a] shadow-sm max-w-[85%] leading-relaxed">
+                    Welcome to GRC SupportTrack. I am <strong>Global AI</strong>. Please state your concern, and I will guide you to the correct department.
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-[#e4d4d4] bg-white rounded-b-[20px] flex-shrink-0">
+            <form id="chatForm" class="flex items-center gap-2">
+                <input type="text" id="chatInput" placeholder="Ask Global AI..." class="flex-1 px-4 py-2.5 bg-[#faf8f8] border-[1.5px] border-[#e4d4d4] rounded-xl text-[13px] outline-none focus:border-maroon transition-colors" autocomplete="off">
+                <button type="submit" id="chatSendBtn" class="w-10 h-10 rounded-xl bg-maroon text-white flex items-center justify-center hover:bg-maroon-dark transition-colors shrink-0">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- VIEW PHOTO MODAL -->
+<div id="viewPhotoModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[500] items-center justify-center" onclick="closeViewModal()">
+    <div class="relative" onclick="event.stopPropagation()">
+        <img id="viewPhotoImg" src="" class="w-72 h-72 rounded-full object-cover border-4 border-white shadow-2xl">
+        <button onclick="closeViewModal()" class="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg text-lg font-bold hover:bg-gray-100">✕</button>
+    </div>
+</div>
+
+<!-- PUBLIC CONCERN MODAL -->
+<div class="modal-overlay hidden fixed inset-0 bg-[#4a101059] backdrop-blur-[3px] z-[500] items-center justify-center" id="publicConcernModal" onclick="closePublicModalOutside(event)">
+    <div class="bg-white rounded-[18px] w-[540px] max-w-[95vw] max-h-[85vh] overflow-y-auto shadow-[0_20px_60px_rgba(74,16,16,0.25)]" id="publicModalBox">
+        <div class="px-7 pt-6 pb-4 border-b border-[#e4d4d4] flex justify-between items-start">
+            <div class="flex items-center gap-3.5">
+                <img id="pubModalAvatar" src="" class="w-11 h-11 rounded-full object-cover border border-[#e4d4d4] shadow-sm">
+                <div>
+                    <p class="font-serif text-[18px] text-maroon-dark leading-tight mb-0.5" id="pubModalName">Student Name</p>
+                    <p class="text-[11.5px] text-[#6b6b6b] font-medium uppercase tracking-wide" id="pubModalSid">ID</p>
+                </div>
+            </div>
+            <button class="bg-transparent border-none cursor-pointer text-[#6b6b6b] text-[20px] leading-none px-1.5 py-0.5 rounded-md transition-colors hover:bg-maroon-pale hover:text-maroon" onclick="closePublicModal()">✕</button>
+        </div>
+        <div class="px-7 py-6">
+            <div class="flex items-center gap-16 mb-5 border-b border-[#e4d4d4] pb-5">
+                <div><span class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b] block mb-1">Tracking ID</span><span class="text-[14px] font-bold text-maroon" id="pubModalId">---</span></div>
+                <div><span class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b] block mb-1">Submitted</span><span class="text-[13px] font-medium" id="pubModalDate">---</span></div>
+            </div>
+            <div class="grid grid-cols-3 gap-4 mb-6 pb-6 border-b border-[#e4d4d4]">
+                <div><span class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b] block mb-1.5">Category</span><div id="pubModalCat"></div></div>
+                <div><span class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b] block mb-1.5">Routed To</span><span class="text-[13px] font-semibold" id="pubModalDept">---</span></div>
+                <div><span class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b] block mb-1.5">Status</span><div id="pubModalStatus"></div></div>
+            </div>
+            <div><span class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b] block mb-2">Description</span>
+                <p class="text-[14px] leading-relaxed whitespace-pre-wrap bg-[#faf8f8] border border-[#e4d4d4] p-4 rounded-xl" id="pubModalDesc">---</p>
+            </div>
+            <div id="pubModalAttachment"></div>
+        </div>
+    </div>
+</div>
+
+<div class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar-trans bg-white border-r border-[#e4d4d4] flex flex-col flex-shrink-0 shadow-sm z-[100] w-[240px]">
+        <div class="bg-maroon-dark flex items-center justify-between flex-shrink-0 h-[60px] px-3">
+            <img id="sidebarLogo" src="{{ url_for('static', filename='images/global_logo.jpg') }}" alt="Logo" class="h-8 w-auto rounded object-contain max-w-[140px]">
+            <button id="sidebarToggleBtn" onclick="toggleSidebar()" title="Toggle menu" class="w-9 h-9 flex flex-col items-center justify-center gap-[5px] rounded-lg hover:bg-white/10 transition-colors flex-shrink-0 p-1.5 border-none bg-transparent cursor-pointer">
+                <span class="block w-4 h-0.5 bg-white/80 rounded-sm transition-all duration-300 origin-center"></span>
+                <span class="block w-4 h-0.5 bg-white/80 rounded-sm transition-all duration-300 origin-center"></span>
+                <span class="block w-4 h-0.5 bg-white/80 rounded-sm transition-all duration-300 origin-center"></span>
+            </button>
+        </div>
+        <div id="sidebarTabs" class="flex border-b border-[#e4d4d4] flex-shrink-0 bg-white overflow-hidden transition-all duration-300">
+            <button id="sidebarTabNav" onclick="switchSidebarTab('nav')" class="flex-1 py-2.5 text-xs font-semibold text-maroon border-b-2 border-maroon transition-all whitespace-nowrap">Nav</button>
+            <button id="sidebarTabBoard" onclick="switchSidebarTab('board')" class="flex-1 py-2.5 text-xs font-semibold text-[#6b6b6b] border-b-2 border-transparent transition-all hover:bg-maroon-faint hover:text-maroon-light whitespace-nowrap">Community</button>
+        </div>
+
+        <!-- NAV PANEL -->
+        <div id="sidebarPanelNav" class="flex flex-col flex-1 overflow-hidden">
+            <nav class="flex-1 overflow-y-auto py-3">
+                <p id="navLabel1" class="sidebar-label text-[10px] font-bold tracking-widest uppercase text-[#bba8a8] px-4 mb-1 mt-1">Pages</p>
+                <button id="navItemSubmit" onclick="goToPage('submit')" title="Submit a Concern" class="flex items-center gap-3 px-4 py-2.5 w-full text-left text-[13px] font-semibold text-maroon bg-maroon-pale border-l-[3px] border-maroon transition-all">
+                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span class="sidebar-label sidebar-item-text">Submit a Concern</span>
+                    <span class="sidebar-badge ml-auto bg-maroon text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full sidebar-label">New</span>
+                </button>
+                <button id="navItemBoard" onclick="goToPage('board')" title="Community Board" class="flex items-center gap-3 px-4 py-2.5 w-full text-left text-[13px] font-medium text-[#6b6b6b] hover:bg-maroon-pale hover:text-maroon transition-all">
+                    <svg class="w-4 h-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span class="sidebar-label sidebar-item-text">Community Board</span>
+                </button>
+                <p id="navLabel2" class="sidebar-label text-[10px] font-bold tracking-widest uppercase text-[#bba8a8] px-4 mb-1 mt-3">Help</p>
+                <div title="How it Works" class="flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-[#6b6b6b] cursor-pointer hover:bg-maroon-pale hover:text-maroon transition-all">
+                    <svg class="w-4 h-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span class="sidebar-label sidebar-item-text">How it Works</span>
+                </div>
+                <div onclick="openGlobalAi()" title="Global AI" class="flex items-center gap-3 px-4 py-2.5 text-[13px] font-bold text-maroon cursor-pointer bg-maroon-pale/50 hover:bg-maroon-pale transition-all">
+                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7v4h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-4a7 7 0 0 1 7-7h1V5.73A2 2 0 1 1 12 2z"/><path d="M12 22a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2z"/></svg>
+                    <span class="sidebar-label sidebar-item-text">Global AI ✨</span>
+                </div>
+            </nav>
+            <div id="sidebarFooter" class="sidebar-label px-4 py-3.5 border-t border-[#e4d4d4] flex-shrink-0 overflow-hidden">
+                <p class="text-[11px] text-[#6b6b6b] leading-relaxed">SupportTrack v1.0<br>Student Concern Tracking System</p>
+            </div>
+        </div>
+
+        <!-- COMMUNITY PANEL -->
+        <div id="sidebarPanelBoard" class="hidden flex-col flex-1 overflow-hidden">
+            <div class="sidebar-label px-4 py-3 border-b border-[#e4d4d4] flex-shrink-0 overflow-hidden">
+                <p class="font-serif text-base text-maroon-dark mb-0.5">Community Board</p>
+                <p class="text-[11px] text-[#6b6b6b]">Public concerns</p>
+            </div>
+            <button onclick="loadBoardPreview()" class="sidebar-label flex items-center gap-1.5 mx-4 mt-2 mb-1 px-3 py-1.5 bg-maroon-pale border border-[#e4d4d4] rounded-lg text-[11px] font-semibold text-maroon hover:bg-[#f0dede] transition-all self-start flex-shrink-0 overflow-hidden">
+                <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Refresh
+            </button>
+            <div id="boardPreviewList" class="sidebar-label flex-1 overflow-y-auto p-3 flex flex-col gap-2 overflow-hidden">
+                <p class="text-center py-10 text-[#6b6b6b] text-xs italic">Loading…</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex flex-col flex-1 overflow-hidden">
+        <nav class="bg-white border-b border-[#e4d4d4] px-5 h-[60px] flex items-center justify-between flex-shrink-0 shadow-sm z-[200]">
+            <div class="flex items-center gap-3">
+                <a href="#" class="font-serif text-xl text-maroon-dark tracking-tight no-underline select-none">Support<span class="text-maroon-light">Track</span></a>
+                <div id="navPagePill" class="flex items-center gap-1.5 bg-maroon-pale border border-[#e4d4d4] rounded-full px-3 py-1 text-[11px] font-bold text-maroon tracking-widest uppercase">
+                    <span class="w-1.5 h-1.5 rounded-full bg-maroon inline-block"></span> Submit Concern
+                </div>
+            </div>
+
+            <div class="relative" id="profileWrapper">
+                <!-- AVATAR BUTTON — overflow-visible so the red dot can peek outside -->
+                <button id="avatarBtn" onclick="toggleProfile()" class="relative w-10 h-10 rounded-full bg-maroon border-2 border-[#e4d4d4] flex items-center justify-center text-white text-[13px] font-bold overflow-visible cursor-pointer hover:border-maroon hover:shadow-[0_0_0_3px_rgba(107,26,26,0.15)] transition-all p-0">
+                    <span id="avatarInitials" class="avatar-init z-10 select-none">ST</span>
+                    <!-- avatar image needs its own clip so it stays inside the circle -->
+                    <span class="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
+                        <img id="avatarImg" class="avatar-img" src="" alt="">
+                    </span>
+                    <span id="avatarPlus" class="absolute bottom-0 right-0 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow border border-[#e4d4d4] z-20 text-maroon text-[10px] font-bold leading-none">+</span>
+                    <!-- RED DOT — hidden until there are unread notifications -->
+                    <span id="notifDot" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white z-30 items-center justify-center text-[9px] text-white font-bold leading-none px-0.5"></span>
+                </button>
+
+                <div id="profileDropdown" class="hidden absolute top-[calc(100%+10px)] right-0 bg-white border border-[#e4d4d4] rounded-2xl shadow-2xl w-[280px] z-[300] overflow-hidden anim-dropin">
+                    <!-- Profile header -->
+                    <div class="bg-gradient-to-br from-maroon-dark to-maroon-light p-5 flex items-start gap-3.5">
+                        <div id="pdAvatar" onclick="togglePhotoOptions()" class="pd-avatar relative w-14 h-14 rounded-full bg-white/15 border-2 border-white/30 flex items-center justify-center text-lg font-bold text-white overflow-hidden cursor-pointer shrink-0 hover:border-white/70 transition-colors select-none">
+                            <span id="pdInitials" class="avatar-init select-none pointer-events-none">ST</span>
+                            <img id="pdImg" class="avatar-img pointer-events-none" src="" alt="">
+                            <div class="cam-overlay pointer-events-none">
+                                <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0 pt-0.5">
+                            <p id="pdName" class="text-[15px] font-bold text-white mb-0.5 truncate">—</p>
+                            <p id="pdSid" class="text-[11px] text-white/60">—</p>
+                            <span id="pdProg" class="inline-block mt-1 bg-white/15 border border-white/20 rounded-full px-2 py-0.5 text-[10px] font-bold text-white/85 tracking-wide">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Photo options panel -->
+                    <div id="photoOptionsPanel" class="bg-maroon-faint border-b border-[#e4d4d4]">
+                        <button id="viewPhotoBtn" onclick="viewPhoto()" class="hidden flex items-center gap-3 pl-5 pr-4 py-2 w-full text-left text-[12.5px] font-medium text-[#1a1a1a] hover:bg-maroon-pale hover:text-maroon transition-colors">
+                            <svg class="w-3.5 h-3.5 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            View Photo
+                        </button>
+                        <button onclick="triggerPhoto()" class="flex items-center gap-3 pl-5 pr-4 py-2 w-full text-left text-[12.5px] font-medium text-[#1a1a1a] hover:bg-maroon-pale hover:text-maroon transition-colors">
+                            <svg class="w-3.5 h-3.5 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            <span id="changePhotoLabel">Upload Photo</span>
+                        </button>
+                        <button id="removePhotoBtn" onclick="removePhoto()" disabled class="flex items-center gap-3 pl-5 pr-4 py-2 w-full text-left text-[12.5px] font-medium text-[#c0392b] hover:bg-[#fdf0f0] transition-colors">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                            Remove Photo
+                        </button>
+                    </div>
+
+                    <!-- ── NOTIFICATIONS SECTION ── -->
+                    <div class="border-b border-[#e4d4d4]">
+                        <div class="flex items-center justify-between px-4 pt-2.5 pb-1.5">
+                            <p class="text-[10px] font-bold tracking-widest uppercase text-[#bba8a8] flex items-center gap-1.5">
+                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                                Notifications
+                            </p>
+                            <button onclick="markAllNotifsRead()" class="text-[10px] font-semibold text-maroon hover:underline transition-colors">Mark all read</button>
+                        </div>
+                        <!-- Notification list — max height with scroll -->
+                        <div id="notifList" class="max-h-[190px] overflow-y-auto">
+                            <p class="px-4 py-3 text-[12px] text-[#6b6b6b] italic">Loading…</p>
+                        </div>
+                    </div>
+
+                    <!-- Account section -->
+                    <p class="px-4 pt-2 pb-1 text-[10px] font-bold tracking-widest uppercase text-[#bba8a8]">Account</p>
+                    <button onclick="closeProfile()" class="flex items-center gap-3 px-4 py-2.5 w-full text-left text-[13px] font-medium text-[#1a1a1a] hover:bg-maroon-pale hover:text-maroon transition-colors">
+                        <svg class="w-4 h-4 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Settings
+                    </button>
+                    <div class="h-px bg-[#e4d4d4]"></div>
+                    <a href="/" class="flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-[#c0392b] hover:bg-[#fdf0f0] transition-colors no-underline">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="flex-1 overflow-y-auto">
+
+            <!-- SUBMIT PAGE -->
+            <div id="pageSubmit" class="block">
+                <div class="max-w-[680px] mx-auto mt-10 px-6 pb-12">
+                    <div class="mb-8">
+                        <h2 class="font-serif text-[30px] text-maroon-dark mb-1.5">Submit a Concern</h2>
+                        <p class="text-sm text-[#6b6b6b]">Your concern will be automatically routed to the correct department.</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-10 shadow-[0_4px_30px_rgba(107,26,26,0.08)] border border-[#e4d4d4] anim-fadeup">
+                        <form id="concernForm">
+                            <p class="text-[11px] font-bold uppercase tracking-[0.1em] text-maroon mb-4">Concern Details</p>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-[11px] font-semibold uppercase tracking-[0.07em] text-[#6b6b6b] mb-1.5">Category</label>
+                                    <select id="category" required class="w-full px-3.5 py-3 border-[1.5px] border-[#e4d4d4] rounded-xl text-sm bg-[#faf8f8] text-[#1a1a1a] font-sans cursor-pointer">
+                                        <option value="" disabled selected>Select category</option>
+                                        <option value="Academic">Academic</option>
+                                        <option value="Financial">Financial</option>
+                                        <option value="Student Welfare">Student Welfare</option>
+                                        <option value="Technical Support">Technical Support</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold uppercase tracking-[0.07em] text-[#6b6b6b] mb-1.5">Anonymity</label>
+                                    <select id="is_anonymous" required class="w-full px-3.5 py-3 border-[1.5px] border-[#e4d4d4] rounded-xl text-sm bg-[#faf8f8] text-[#1a1a1a] font-sans cursor-pointer">
+                                        <option value="" disabled selected>Select option</option>
+                                        <option value="false">Show My ID</option>
+                                        <option value="true">Stay Anonymous</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <label class="block text-[11px] font-semibold uppercase tracking-[0.07em] text-[#6b6b6b]">Description</label>
+                                    <span id="charCounter" class="text-[11px] font-medium text-[#6b6b6b]">0 / 200 letters</span>
+                                </div>
+                                <textarea id="description" rows="6" required
+                                    placeholder="Describe your concern in detail (minimum 10 letters, maximum 200 letters)…"
+                                    oninput="updateCharCount(this)"
+                                    class="w-full px-3.5 py-3 border-[1.5px] border-[#e4d4d4] rounded-xl text-sm bg-[#faf8f8] text-[#1a1a1a] font-sans resize-y leading-relaxed"></textarea>
+                                <p id="charHint" class="text-[11px] mt-1 text-[#6b6b6b]">Minimum 10 letters required.</p>
+                            </div>
+                            <div class="h-px bg-[#e4d4d4] my-7"></div>
+                            <p class="text-[11px] font-bold uppercase tracking-[0.1em] text-maroon mb-4">Attachment (Optional)</p>
+                            <div onclick="document.getElementById('fileInput').click()" class="border-[1.5px] border-dashed border-[#e4d4d4] rounded-xl p-5 text-center bg-[#faf8f8] cursor-pointer hover:border-maroon-light transition-colors">
+                                <input type="file" id="fileInput" class="hidden" onchange="updateFileName(this)">
+                                <p id="fileLabelText" class="text-[13px] text-[#6b6b6b]">
+                                    <strong class="text-maroon font-semibold">Click to upload</strong> or drag and drop a file here<br>
+                                    <span class="text-xs">PDF, PNG, JPG up to 10MB</span>
+                                </p>
+                            </div>
+                            <div class="h-px bg-[#e4d4d4] my-7"></div>
+                            <button type="submit" id="submitBtn" class="w-full py-3.5 bg-maroon text-white rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2 hover:bg-maroon-dark active:scale-[0.99] transition-all">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                <span>Submit Concern</span>
+                            </button>
+                            <div id="form-msg" class="hidden mt-3.5 px-4 py-3 rounded-xl text-[13px] font-medium text-center"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMMUNITY BOARD PAGE -->
+            <div id="pageBoardFull" class="hidden">
+                <div class="max-w-[1200px] mx-auto mt-10 px-6 pb-12">
+                    <div class="mb-6">
+                        <h2 class="font-serif text-[30px] text-maroon-dark mb-1.5">Community Board</h2>
+                        <p class="text-sm text-[#6b6b6b]">Public concerns submitted by fellow students — anonymous concerns will hide the sender's identity.</p>
+                    </div>
+                    <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+                        <p id="boardPageCount" class="text-[13px] text-[#6b6b6b] font-medium">Loading…</p>
+                        <button onclick="loadBoardFull()" class="flex items-center gap-1.5 px-4 py-2 bg-white border-[1.5px] border-[#e4d4d4] rounded-[9px] text-[13px] font-semibold text-maroon hover:bg-maroon-pale hover:border-maroon-light transition-all">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="boardPageGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <p class="col-span-full text-center py-20 text-[#6b6b6b] text-sm italic">Loading…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storedId      = localStorage.getItem("student_id") || "";
+    const storedProgram = localStorage.getItem("program")    || "BSIT";
+    let publicConcerns  = [];
+    let cachedUsers     = {};
+    let aiChatHistory   = [];
+
+    document.getElementById("student_id").value = storedId;
+    document.getElementById("program").value    = storedProgram;
+
+    function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ""; }
+
+    async function loadUserInfo() {
+        if (!storedId) return;
+        try {
+            const res  = await fetch("/get_user_info", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({student_id:storedId}) });
+            const data = await res.json();
+            if (data.status === "success") {
+                const fn = data.first_name || "", ln = data.last_name || "";
+                const fullName = fn||ln ? `${cap(fn)} ${cap(ln)}`.trim() : "Student";
+                const initials = fn&&ln ? (fn[0]+ln[0]).toUpperCase() : storedId.slice(0,2).toUpperCase();
+                document.getElementById("avatarInitials").innerText = initials;
+                document.getElementById("pdInitials").innerText     = initials;
+                document.getElementById("pdName").innerText         = fullName;
+                document.getElementById("pdSid").innerText          = storedId;
+                document.getElementById("pdProg").innerText         = data.program || storedProgram;
+                if (data.profile_photo) applyPhoto(data.profile_photo);
+            }
+        } catch {
+            document.getElementById("pdName").innerText = "Student";
+            document.getElementById("pdSid").innerText  = storedId;
+        }
+    }
+    loadUserInfo();
+
+    function applyPhoto(url) {
+        ["avatarBtn","pdAvatar"].forEach(id => document.getElementById(id).classList.add("has-photo"));
+        document.getElementById("avatarImg").src = url;
+        document.getElementById("pdImg").src     = url;
+        document.getElementById("avatarPlus").style.display = "none";
+        document.getElementById("viewPhotoBtn").classList.remove("hidden");
+        document.getElementById("viewPhotoBtn").classList.add("flex");
+        document.getElementById("removePhotoBtn").removeAttribute("disabled");
+        document.getElementById("changePhotoLabel").innerText = "Change Photo";
+    }
+    function clearPhoto() {
+        ["avatarBtn","pdAvatar"].forEach(id => document.getElementById(id).classList.remove("has-photo"));
+        document.getElementById("avatarImg").src = "";
+        document.getElementById("pdImg").src     = "";
+        document.getElementById("avatarPlus").style.display = "";
+        document.getElementById("viewPhotoBtn").classList.add("hidden");
+        document.getElementById("viewPhotoBtn").classList.remove("flex");
+        document.getElementById("removePhotoBtn").setAttribute("disabled","");
+        document.getElementById("changePhotoLabel").innerText = "Upload Photo";
+    }
+    function triggerPhoto() { document.getElementById("photoInput").click(); }
+    let photoOptionsOpen = false;
+    function togglePhotoOptions() {
+        photoOptionsOpen = !photoOptionsOpen;
+        document.getElementById("photoOptionsPanel").classList.toggle("open", photoOptionsOpen);
+    }
+    document.getElementById("photoInput").addEventListener("change", function() {
+        const file = this.files[0];
+        if (!file) return;
+        if (file.size > 5*1024*1024) { showToast("Photo must be under 5MB."); return; }
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const img = new Image();
+            img.onload = async function() {
+                const canvas = document.createElement("canvas");
+                const MAX = 200, ratio = Math.min(MAX/img.width, MAX/img.height);
+                canvas.width  = Math.round(img.width*ratio);
+                canvas.height = Math.round(img.height*ratio);
+                canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+                const compressed = canvas.toDataURL("image/jpeg",0.8);
+                showToast("Uploading photo…");
+                try {
+                    const res  = await fetch("/upload_profile_photo", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({student_id:storedId,image_data:compressed}) });
+                    const data = await res.json();
+                    if (data.status==="success") { applyPhoto(data.url); showToast("✓ Profile photo updated!"); }
+                    else showToast("Upload failed: "+(data.message||"Error"));
+                } catch { showToast("Upload failed. Try again."); }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        this.value = "";
+    });
+    async function removePhoto() {
+        try {
+            const res  = await fetch("/remove_profile_photo", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({student_id:storedId}) });
+            const data = await res.json();
+            if (data.status==="success") { clearPhoto(); showToast("Profile photo removed."); }
+            else showToast("Remove failed.");
+        } catch { showToast("Remove failed. Try again."); }
+        closeProfile();
+    }
+    function viewPhoto() {
+        const src = document.getElementById("pdImg").src;
+        if (!src) return;
+        document.getElementById("viewPhotoImg").src = src;
+        document.getElementById("viewPhotoModal").classList.remove("hidden");
+        document.getElementById("viewPhotoModal").classList.add("flex");
+        closeProfile();
+    }
+    function closeViewModal() {
+        document.getElementById("viewPhotoModal").classList.add("hidden");
+        document.getElementById("viewPhotoModal").classList.remove("flex");
+    }
+    function toggleProfile() {
+        const dd = document.getElementById("profileDropdown");
+        const isHidden = dd.classList.contains("hidden");
+        dd.classList.toggle("hidden", !isHidden);
+        dd.classList.toggle("block", isHidden);
+        if (isHidden) loadNotifications(); // refresh notifs every time dropdown opens
+    }
+    function closeProfile() {
+        document.getElementById("profileDropdown").classList.add("hidden");
+        document.getElementById("profileDropdown").classList.remove("block");
+        photoOptionsOpen = false;
+        document.getElementById("photoOptionsPanel").classList.remove("open");
+    }
+    document.addEventListener("click", function(e) {
+        if (!document.getElementById("profileWrapper").contains(e.target) && e.target !== document.getElementById("photoInput")) closeProfile();
+    });
+
+    // ── NOTIFICATIONS ──
+    async function loadNotifications() {
+        if (!storedId) return;
+        try {
+            const res  = await fetch("/api/notifications", {
+                method: "POST",
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify({student_id: storedId})
+            });
+            const data = await res.json();
+            const notifs = data.notifications || [];
+            const unread = data.unread || 0;
+
+            // Update red dot on avatar
+            const dot = document.getElementById("notifDot");
+            if (unread > 0) {
+                dot.classList.remove("hidden");
+                dot.classList.add("flex");
+                dot.innerText = unread > 9 ? "9+" : String(unread);
+            } else {
+                dot.classList.add("hidden");
+                dot.classList.remove("flex");
+                dot.innerText = "";
+            }
+
+            // Render list
+            const list = document.getElementById("notifList");
+            if (!notifs.length) {
+                list.innerHTML = '<p class="px-4 py-4 text-[12px] text-[#6b6b6b] italic text-center">No notifications yet.</p>';
+                return;
+            }
+
+            const typeIcon = {
+                "submitted":    "📨",
+                "read":         "👁",
+                "screened":     "🔍",
+                "resolved":     "✅",
+                "escalated":    "⚠️",
+                "closed":       "🔒",
+                "sla_escalated":"🚨",
+            };
+
+            list.innerHTML = notifs.map(n => `
+                <div onclick="markNotifRead('${n.id}')"
+                     class="flex items-start gap-2.5 px-4 py-2.5 border-b border-[#f3eaea] last:border-none cursor-pointer transition-colors
+                            ${!n.is_read ? 'bg-[#fdf5f5]' : 'hover:bg-[#faf8f8]'}">
+                    <span class="text-[14px] shrink-0 mt-0.5">${typeIcon[n.type] || "🔔"}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[12px] leading-snug ${!n.is_read ? 'font-semibold text-[#1a1a1a]' : 'text-[#444]'}">${n.message}</p>
+                        <p class="text-[10.5px] text-[#6b6b6b] mt-0.5">${formatNotifDate(n.created_at)}</p>
+                    </div>
+                    ${!n.is_read ? '<span class="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1.5"></span>' : ''}
+                </div>
+            `).join("");
+        } catch { /* silent fail — don't disrupt UX */ }
+    }
+
+    async function markNotifRead(notifId) {
+        if (!storedId) return;
+        try {
+            await fetch("/api/notifications/mark_read", {
+                method: "POST",
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify({student_id: storedId, notif_id: notifId})
+            });
+            loadNotifications();
+        } catch {}
+    }
+
+    async function markAllNotifsRead() {
+        if (!storedId) return;
+        try {
+            await fetch("/api/notifications/mark_read", {
+                method: "POST",
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify({student_id: storedId})
+            });
+            loadNotifications();
+        } catch {}
+    }
+
+    function formatNotifDate(iso) {
+        if (!iso) return "";
+        const d    = new Date(iso);
+        const now  = new Date();
+        const diff = (now - d) / 1000;
+        if (diff < 60)    return "Just now";
+        if (diff < 3600)  return Math.floor(diff / 60) + "m ago";
+        if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+        if (diff < 172800) return "Yesterday";
+        return d.toLocaleDateString("en-PH", {month:"short", day:"numeric"});
+    }
+
+    // Load notifs on page load + poll every 30s
+    loadNotifications();
+    setInterval(loadNotifications, 30000);
+
+    // ── SIDEBAR ──
+    let sidebarOpen = true;
+    function toggleSidebar() {
+        sidebarOpen = !sidebarOpen;
+        const sidebar = document.getElementById("sidebar");
+        const labels  = sidebar.querySelectorAll(".sidebar-label");
+        const tabs    = document.getElementById("sidebarTabs");
+        const logo    = document.getElementById("sidebarLogo");
+        if (sidebarOpen) {
+            sidebar.style.width = "240px";
+            labels.forEach(el => { el.style.opacity="1"; el.style.maxWidth="9999px"; el.style.overflow="hidden"; });
+            tabs.style.maxHeight = "48px"; tabs.style.opacity = "1";
+            logo.style.opacity = "1"; logo.style.maxWidth = "140px";
+        } else {
+            sidebar.style.width = "56px";
+            labels.forEach(el => { el.style.opacity="0"; el.style.maxWidth="0"; });
+            tabs.style.maxHeight = "0"; tabs.style.opacity = "0";
+            logo.style.opacity = "0"; logo.style.maxWidth = "0";
+        }
+    }
+
+    function switchSidebarTab(tab) {
+        const AN = "flex-1 py-2.5 text-xs font-semibold text-maroon border-b-2 border-maroon transition-all whitespace-nowrap";
+        const IN = "flex-1 py-2.5 text-xs font-semibold text-[#6b6b6b] border-b-2 border-transparent transition-all hover:bg-maroon-faint hover:text-maroon-light whitespace-nowrap";
+        document.getElementById("sidebarTabNav").className   = tab==="nav"   ? AN : IN;
+        document.getElementById("sidebarTabBoard").className = tab==="board" ? AN : IN;
+        document.getElementById("sidebarPanelNav").className   = tab==="nav"   ? "flex flex-col flex-1 overflow-hidden" : "hidden flex-col flex-1 overflow-hidden";
+        document.getElementById("sidebarPanelBoard").className = tab==="board" ? "flex flex-col flex-1 overflow-hidden" : "hidden flex-col flex-1 overflow-hidden";
+        if (tab==="board") loadBoardPreview();
+    }
+
+    function goToPage(page) {
+        document.getElementById("pageSubmit").className    = page==="submit" ? "block" : "hidden";
+        document.getElementById("pageBoardFull").className = page==="board"  ? "block" : "hidden";
+        document.getElementById("navPagePill").innerHTML   = page==="submit"
+            ? '<span class="w-1.5 h-1.5 rounded-full bg-maroon inline-block"></span> Submit Concern'
+            : '<span class="w-1.5 h-1.5 rounded-full bg-maroon inline-block"></span> Community Board';
+        const A = "flex items-center gap-3 px-4 py-2.5 w-full text-left text-[13px] font-semibold text-maroon bg-maroon-pale border-l-[3px] border-maroon transition-all";
+        const I = "flex items-center gap-3 px-4 py-2.5 w-full text-left text-[13px] font-medium text-[#6b6b6b] hover:bg-maroon-pale hover:text-maroon transition-all";
+        document.getElementById("navItemSubmit").className = page==="submit" ? A : I;
+        document.getElementById("navItemBoard").className  = page==="board"  ? A : I;
+        if (page==="board") loadBoardFull();
+    }
+
+    // ── CHAR COUNT ──
+    function countLetters(str) { return str.replace(/\s/g,"").length; }
+    function updateCharCount(textarea) {
+        const letters = countLetters(textarea.value);
+        const counter = document.getElementById("charCounter");
+        const hint    = document.getElementById("charHint");
+        counter.innerText = `${letters} / 200 letters`;
+        if (letters===0) {
+            counter.className="text-[11px] font-medium text-[#6b6b6b]"; hint.innerText="Minimum 10 letters required."; hint.className="text-[11px] mt-1 text-[#6b6b6b]";
+        } else if (letters<10) {
+            counter.className="text-[11px] font-medium ccount-err"; hint.innerText=`Need ${10-letters} more letter${10-letters!==1?"s":""}.`; hint.className="text-[11px] mt-1 ccount-err";
+        } else if (letters>200) {
+            let kept=0,cutIdx=0;
+            for(let i=0;i<textarea.value.length;i++){if(textarea.value[i]!==" "&&textarea.value[i]!=="\n"&&textarea.value[i]!=="\t")kept++;if(kept>200){cutIdx=i;break;}}
+            textarea.value=textarea.value.slice(0,cutIdx); updateCharCount(textarea);
+        } else {
+            counter.className="text-[11px] font-medium ccount-ok"; hint.innerText="✓ Good length."; hint.className="text-[11px] mt-1 ccount-ok";
+        }
+    }
+
+    // ── GLOBAL AI CHATBOT ──
+    function openGlobalAi() {
+        document.getElementById('globalAiModal').classList.remove('hidden');
+        document.getElementById('globalAiModal').classList.add('flex');
+        setTimeout(() => document.getElementById('chatInput').focus(), 100);
+    }
+    function closeGlobalAi() {
+        document.getElementById('globalAiModal').classList.add('hidden');
+        document.getElementById('globalAiModal').classList.remove('flex');
+    }
+    function closeAiModalOutside(e) {
+        if (e.target === document.getElementById('globalAiModal')) closeGlobalAi();
+    }
+
+    function addChatMessage(message, isUser = false) {
+        const chatArea = document.getElementById('chatMessages');
+        let msgHtml = '';
+        if (isUser) {
+            msgHtml = `
+            <div class="flex gap-3 justify-end">
+                <div class="bg-maroon text-white p-3.5 rounded-2xl rounded-tr-sm text-[13px] shadow-sm max-w-[85%] leading-relaxed">${eh(message)}</div>
+            </div>`;
+        } else {
+            msgHtml = `
+            <div class="flex gap-3">
+                <div class="w-8 h-8 rounded-full bg-maroon-pale border border-maroon-light flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="w-4 h-4 text-maroon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7v4h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-4a7 7 0 0 1 7-7h1V5.73A2 2 0 1 1 12 2z"/></svg>
+                </div>
+                <div class="bg-white border border-[#e4d4d4] p-3.5 rounded-2xl rounded-tl-sm text-[13px] text-[#1a1a1a] shadow-sm max-w-[85%] leading-relaxed whitespace-pre-wrap">${message.replace(/\n/g,'<br>')}</div>
+            </div>`;
+        }
+        chatArea.insertAdjacentHTML('beforeend', msgHtml);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function showAiTyping() {
+        const chatArea = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.id = 'aiTypingIndicator';
+        div.className = 'flex gap-3 items-center';
+        div.innerHTML = `
+            <div class="w-8 h-8 rounded-full bg-maroon-pale border border-maroon-light flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-maroon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7v4h1a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1h1v-4a7 7 0 0 1 7-7h1V5.73A2 2 0 1 1 12 2z"/></svg>
+            </div>
+            <div class="bg-white border border-[#e4d4d4] px-4 py-2.5 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2.5">
+                <span class="flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-maroon-light animate-bounce" style="animation-delay:0ms"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-maroon-light animate-bounce" style="animation-delay:160ms"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-maroon-light animate-bounce" style="animation-delay:320ms"></span>
+                </span>
+                <span class="text-[11.5px] text-[#6b6b6b] italic font-medium">Global AI is composing a response…</span>
+            </div>`;
+        chatArea.appendChild(div);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+    function removeAiTyping() {
+        const el = document.getElementById('aiTypingIndicator');
+        if (el) el.remove();
+    }
+
+    document.getElementById('chatForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const input   = document.getElementById('chatInput');
+        const message = input.value.trim();
+        const btn     = document.getElementById('chatSendBtn');
+        if (!message) return;
+
+        addChatMessage(message, true);
+        aiChatHistory.push({ role: "user", content: message });
+        input.value    = '';
+        input.disabled = true;
+        btn.disabled   = true;
+        btn.innerHTML  = `<svg class="w-4 h-4 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+        showAiTyping();
+
+        try {
+            const res  = await fetch('/api/global_ai_chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, history: aiChatHistory.slice(0,-1) })
+            });
+            const data = await res.json();
+            removeAiTyping();
+            if (data.status === 'success') {
+                aiChatHistory.push({ role:"assistant", content: data.reply });
+                addChatMessage(data.reply);
+            } else {
+                aiChatHistory.pop();
+                addChatMessage("I'm having trouble connecting right now. Please try again in a moment.");
+            }
+        } catch {
+            removeAiTyping();
+            aiChatHistory.pop();
+            addChatMessage("Unable to reach Global AI. Please check your connection and try again.");
+        } finally {
+            input.disabled = false;
+            btn.disabled   = false;
+            btn.innerHTML  = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+            input.focus();
+        }
+    });
+
+    // ── BOARD ──
+    async function fetchBoardData() {
+        const res = await fetch("/api/public_concerns");
+        const data = await res.json();
+        publicConcerns = data.concerns || [];
+        return publicConcerns;
+    }
+    async function getUserData(studentId) {
+        if(cachedUsers[studentId]) return cachedUsers[studentId];
+        try {
+            const res  = await fetch("/get_user_info", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({student_id:studentId}) });
+            const data = await res.json();
+            if(data.status==="success") {
+                const fn = data.first_name||"", ln = data.last_name||"";
+                const name = fn||ln ? `${cap(fn)} ${cap(ln)}`.trim() : "Student";
+                const pic  = data.profile_photo || `https://ui-avatars.com/api/?name=${fn}+${ln}&background=f0f7fd&color=1a4a6b`;
+                cachedUsers[studentId] = { name, pic };
+                return cachedUsers[studentId];
+            }
+        } catch {}
+        return { name:"Unknown Student", pic:"https://ui-avatars.com/api/?name=US&background=f0f7fd&color=1a4a6b" };
+    }
+    async function loadBoardPreview() {
+        const list=document.getElementById("boardPreviewList");
+        list.innerHTML='<p class="text-center py-10 text-[#6b6b6b] text-xs italic">Loading…</p>';
+        try {
+            const c=await fetchBoardData();
+            if(!c.length){list.innerHTML='<p class="text-center py-10 text-[#6b6b6b] text-xs">No public concerns yet.</p>';return;}
+            list.innerHTML=c.map(x=>`<div onclick="openPublicModal('${x.id}')" class="cursor-pointer bg-white border border-[#e4d4d4] rounded-xl p-3 hover:border-maroon-light hover:shadow-md transition-all"><div class="flex justify-between items-start mb-1.5 gap-1.5"><span class="text-xs font-bold text-maroon">${x.id}</span>${bb(x.category)}</div><p class="text-xs text-[#1a1a1a] leading-snug mb-2 board-clamp3">${eh(x.description)}</p><div class="flex justify-between items-center"><span class="text-[11px] text-maroon-light font-medium">${x.assigned_dept||"—"}</span>${bs(x.status)}</div></div>`).join("");
+        } catch{list.innerHTML='<p class="text-center py-10 text-[#6b6b6b] text-xs">Failed to load.</p>';}
+    }
+    async function loadBoardFull() {
+        const grid=document.getElementById("boardPageGrid"), count=document.getElementById("boardPageCount");
+        grid.innerHTML='<p class="col-span-full text-center py-20 text-[#6b6b6b] text-sm italic">Loading…</p>'; count.innerText="Loading…";
+        try {
+            const c=await fetchBoardData();
+            count.innerText=c.length?`${c.length} public concern${c.length!==1?"s":""}` : "0 concerns";
+            if(!c.length){grid.innerHTML='<div class="col-span-full text-center py-20 text-[#6b6b6b]"><p class="text-sm">No public concerns yet.</p></div>';return;}
+            let html='';
+            for(let x of c) {
+                let uName="Anonymous Student", uPic="https://ui-avatars.com/api/?name=Anonymous&background=fdf0f0&color=c0392b";
+                if(!x.is_anonymous){const u=await getUserData(x.student_id);uName=u.name;uPic=u.pic;}
+                html+=`<div onclick="openPublicModal('${x.id}')" class="cursor-pointer bg-white rounded-2xl border border-[#e4d4d4] shadow-sm p-5 hover:border-maroon-light hover:shadow-md transition-all anim-fadeup flex flex-col h-full"><div class="flex justify-between items-start mb-3 gap-2"><div class="flex items-center gap-2.5"><img src="${uPic}" class="w-8 h-8 rounded-full object-cover border border-[#e4d4d4]"><p class="text-[13px] font-bold text-maroon-dark leading-tight">${uName}</p></div>${bb(x.category)}</div><p class="text-[13.5px] text-[#1a1a1a] leading-relaxed mb-4 board-clamp4 flex-1">${eh(x.description)}</p><div class="flex justify-between items-center pt-3 border-t border-[#e4d4d4] mt-auto"><span class="text-xs text-maroon-light font-semibold">${x.assigned_dept||"—"}</span>${bs(x.status,true)}</div></div>`;
+            }
+            grid.innerHTML=html;
+        } catch{grid.innerHTML='<p class="col-span-full text-center py-20 text-[#6b6b6b] text-sm">Failed to load.</p>';count.innerText="Error";}
+    }
+
+    async function openPublicModal(id) {
+        const c=publicConcerns.find(x=>x.id===id); if(!c) return;
+        document.getElementById('pubModalId').innerText=c.id;
+        document.getElementById('pubModalCat').innerHTML=bb(c.category);
+        document.getElementById('pubModalDept').innerText=c.assigned_dept||'—';
+        document.getElementById('pubModalStatus').innerHTML=bs(c.status);
+        document.getElementById('pubModalDate').innerText=formatDate(c.created_at);
+        document.getElementById('pubModalDesc').innerText=c.description;
+        const avatarImg=document.getElementById('pubModalAvatar'), nameEl=document.getElementById('pubModalName'), sidEl=document.getElementById('pubModalSid');
+        if(c.is_anonymous){avatarImg.src='https://ui-avatars.com/api/?name=Anonymous&background=fdf0f0&color=c0392b';nameEl.innerText='Anonymous Student';sidEl.innerText='Identity Hidden';}
+        else{avatarImg.src='https://ui-avatars.com/api/?name=Student&background=f0f7fd&color=1a4a6b';nameEl.innerText='Loading...';sidEl.innerText=c.student_id;try{const u=await getUserData(c.student_id);nameEl.innerText=u.name;avatarImg.src=u.pic;}catch{nameEl.innerText="Student";}}
+        const att=document.getElementById('pubModalAttachment');
+        att.innerHTML=c.attachment_path?`<div class="mt-4 pt-4 border-t border-[#e4d4d4]"><span class="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6b6b6b] block mb-2">Attachment</span><a href="${c.attachment_path}" target="_blank" class="text-maroon font-semibold text-[13px] hover:underline">View Attached File ↗</a></div>`:'';
+        document.getElementById('publicConcernModal').classList.remove('hidden');
+        document.getElementById('publicConcernModal').classList.add('flex');
+    }
+    function closePublicModal(){document.getElementById('publicConcernModal').classList.add('hidden');document.getElementById('publicConcernModal').classList.remove('flex');}
+    function closePublicModalOutside(e){if(e.target===document.getElementById('publicConcernModal'))closePublicModal();}
+
+    function bb(cat){const m={"Academic":"bg-[#eef2ff] text-[#3b4abf] border-[#c7d0f8]","Financial":"bg-[#fff8ec] text-[#92610a] border-[#f5dfa0]","Student Welfare":"bg-[#f0fdf5] text-[#1a6b3a] border-[#b7e8cc]","Welfare":"bg-[#f0fdf5] text-[#1a6b3a] border-[#b7e8cc]","Technical Support":"bg-gray-100 text-gray-800 border-gray-300"};return`<span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${m[cat]||""}">${cat}</span>`;}
+    function bs(s,lg=false){const m={"Routed":"bg-[#f0f7fd] text-[#1a4a6b] border-[#b8d8f0]","Read":"bg-purple-50 text-purple-700 border-purple-200","Screened":"bg-orange-50 text-orange-700 border-orange-200","In Progress":"bg-[#fffbeb] text-[#92610a] border-[#f0d8a0]","Resolved":"bg-[#f0fdf5] text-[#1a6b3a] border-[#b7e8cc]","Escalated":"bg-purple-50 text-purple-800 border-purple-300","Closed":"bg-[#f5f5f5] text-[#666] border-[#ddd]"};return`<span class="inline-block font-semibold rounded-full border ${lg?"text-[11px] px-2.5 py-0.5":"text-[10px] px-2 py-0.5"} ${m[s]||m["Routed"]}">${s}</span>`;}
+    function eh(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+    function formatDate(iso){if(!iso)return'—';const d=new Date(iso);return d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});}
+    function showToast(msg){const t=document.getElementById("toast");t.innerText=msg;t.classList.remove("opacity-0","translate-y-3");t.classList.add("opacity-100","translate-y-0");setTimeout(()=>{t.classList.add("opacity-0","translate-y-3");t.classList.remove("opacity-100","translate-y-0");},2800);}
+    function updateFileName(input){document.getElementById("fileLabelText").innerHTML=input.files?.length?`<strong class="text-[#1a6b3a] font-semibold">File selected:</strong> ${input.files[0].name}`:`<strong class="text-maroon font-semibold">Click to upload</strong> or drag and drop a file here<br><span class="text-xs">PDF, PNG, JPG up to 10MB</span>`;}
+
+    // ── SUBMIT + AI MODERATION ──
+    document.getElementById("concernForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const descEl  = document.getElementById("description");
+        const desc    = descEl.value;
+        const letters = countLetters(desc);
+        const msgEl   = document.getElementById("form-msg");
+        const btn     = document.getElementById("submitBtn");
+
+        if(letters<10){
+            msgEl.className="block mt-3.5 px-4 py-3 rounded-xl text-[13px] font-medium text-center text-[#c0392b] bg-[#fdf0f0] border border-[#f5b7b1]";
+            msgEl.innerText=`Description is too short (${letters} letter${letters!==1?"s":""}). Please write at least 10 letters.`;
+            return;
+        }
+        if(letters>200){
+            msgEl.className="block mt-3.5 px-4 py-3 rounded-xl text-[13px] font-medium text-center text-[#c0392b] bg-[#fdf0f0] border border-[#f5b7b1]";
+            msgEl.innerText="Description is too long. Maximum 200 letters allowed.";
+            return;
+        }
+
+        msgEl.className="block mt-3.5 px-4 py-3 rounded-xl text-[13px] font-medium text-center text-maroon bg-maroon-pale";
+        msgEl.innerHTML=`<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4 animate-spin text-maroon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>Global AI is reviewing your concern…</span>`;
+        btn.disabled=true; btn.classList.add("opacity-70","cursor-not-allowed");
+
+        try {
+            const modRes = await fetch("/api/moderate_concern", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ description: desc, category: document.getElementById("category").value })
+            });
+            const modData = await modRes.json();
+
+            if (modData.status === "success" && modData.action === "block") {
+                const reason = modData.reason && modData.reason.trim()
+                    ? modData.reason.trim()
+                    : "Your concern does not appear to be related to a school matter, or it contains language that is not permitted on this platform.";
+                msgEl.className = "block mt-3.5 px-4 py-4 rounded-xl text-center text-[#c0392b] bg-[#fdf0f0] border border-[#f5b7b1]";
+                msgEl.innerHTML = `<div class="flex flex-col items-center gap-1.5"><span class="text-[14px] font-bold">⚠️ Submission Declined</span><span class="text-[12.5px] leading-snug max-w-[85%] text-[#c0392b]/90">${reason}</span><span class="text-[11px] text-[#6b6b6b] mt-0.5">Please revise your concern and ensure it relates to a school matter and uses appropriate language.</span></div>`;
+                btn.disabled=false; btn.classList.remove("opacity-70","cursor-not-allowed");
+                return;
+            }
+
+            msgEl.innerHTML=`<span class="flex items-center justify-center gap-2"><svg class="w-4 h-4 animate-spin text-maroon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>Submitting and auto-routing your concern…</span>`;
+
+            const fd=new FormData();
+            fd.append("student_id",document.getElementById("student_id").value);
+            fd.append("program",document.getElementById("program").value);
+            fd.append("category",document.getElementById("category").value);
+            fd.append("description",desc);
+            fd.append("is_anonymous",document.getElementById("is_anonymous").value==="true");
+            const fi=document.getElementById("fileInput");
+            if(fi.files.length>0) fd.append("attachment",fi.files[0]);
+
+            const res=await fetch("/submit_concern",{method:"POST",body:fd});
+            const data=await res.json();
+
+            if(data.status==="success"){
+                msgEl.className="block mt-3.5 px-4 py-3 rounded-xl text-[13px] font-medium text-center text-[#1a6b3a] bg-[#f0fdf5] border border-[#b7e8cc]";
+                msgEl.innerText="✓ Concern submitted successfully! Tracking ID: "+data.tracking_id;
+                document.getElementById("concernForm").reset();
+                document.getElementById("student_id").value=storedId;
+                document.getElementById("program").value=storedProgram;
+                document.getElementById("fileLabelText").innerHTML=`<strong class="text-maroon font-semibold">Click to upload</strong> or drag and drop a file here<br><span class="text-xs">PDF, PNG, JPG up to 10MB</span>`;
+                document.getElementById("charCounter").innerText="0 / 200 letters";
+                document.getElementById("charCounter").className="text-[11px] font-medium text-[#6b6b6b]";
+                document.getElementById("charHint").innerText="Minimum 10 letters required.";
+                document.getElementById("charHint").className="text-[11px] mt-1 text-[#6b6b6b]";
+                // Refresh notifications after submission (a new "submitted" notif should appear)
+                setTimeout(loadNotifications, 1500);
+            } else {
+                msgEl.className="block mt-3.5 px-4 py-3 rounded-xl text-[13px] font-medium text-center text-[#c0392b] bg-[#fdf0f0] border border-[#f5b7b1]";
+                msgEl.innerText="Error: "+data.message;
+            }
+        } catch {
+            msgEl.className="block mt-3.5 px-4 py-3 rounded-xl text-[13px] font-medium text-center text-[#c0392b] bg-[#fdf0f0] border border-[#f5b7b1]";
+            msgEl.innerText="Server connection failed. Please try again.";
+        } finally {
+            btn.disabled=false;
+            btn.classList.remove("opacity-70","cursor-not-allowed");
+        }
+    });
+</script>
+</body>
+</html>

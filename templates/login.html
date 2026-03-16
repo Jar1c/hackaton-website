@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SupportTrack | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --maroon: #6B1A1A;
+            --maroon-dark: #4A1010;
+            --maroon-light: #8B2E2E;
+            --maroon-pale: #F9F0F0;
+            --gold: #C9A84C;
+            --text: #1a1a1a;
+            --muted: #6b6b6b;
+            --border: #e4d4d4;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: var(--maroon-pale);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                radial-gradient(ellipse at 20% 50%, rgba(107,26,26,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(107,26,26,0.06) 0%, transparent 50%);
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 20px;
+            width: 420px;
+            padding: 48px 44px;
+            box-shadow: 0 8px 40px rgba(107,26,26,0.10), 0 1px 3px rgba(107,26,26,0.05);
+            border: 1px solid var(--border);
+            animation: fadeUp 0.5s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .brand-logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            background: var(--maroon);
+            border-radius: 14px;
+            margin-bottom: 14px;
+        }
+
+        .brand-logo svg {
+            width: 26px;
+            height: 26px;
+            fill: var(--white);
+        }
+
+        .brand h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            color: var(--maroon-dark);
+            letter-spacing: -0.3px;
+        }
+
+        .brand h1 span {
+            color: var(--maroon-light);
+        }
+
+        .brand p {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            color: var(--text);
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 7px;
+        }
+
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: #faf8f8;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--maroon);
+            box-shadow: 0 0 0 3px rgba(107,26,26,0.08);
+            background: var(--white);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 13px;
+            background: var(--maroon);
+            color: var(--white);
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 8px;
+        }
+
+        .btn-primary:hover { background: var(--maroon-dark); }
+        .btn-primary:active { transform: scale(0.99); }
+
+        .footer-text {
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 20px;
+        }
+
+        .footer-text a {
+            color: var(--maroon);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .footer-text a:hover { text-decoration: underline; }
+
+        #msg {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 14px;
+            min-height: 20px;
+            border-radius: 8px;
+            padding: 0;
+            transition: all 0.2s;
+        }
+
+        #msg.error {
+            color: #c0392b;
+            background: #fdf0f0;
+            padding: 10px;
+        }
+
+        #msg.success {
+            color: #1a6b3a;
+            background: #f0fdf5;
+            padding: 10px;
+        }
+
+        #msg.loading {
+            color: var(--maroon);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/>
+                </svg>
+            </div>
+            <h1>Support<span>Track</span></h1>
+            <p>Student Concern Tracking System</p>
+        </div>
+
+        <p class="section-title">Welcome back</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="you@school.edu.ph" required />
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="btn-primary">Sign In</button>
+        </form>
+
+        <p id="msg"></p>
+
+        <div class="divider"></div>
+
+        <p class="footer-text">
+            No account yet? <a href="/signup">Create one here</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const msgEl = document.getElementById("msg");
+
+            msgEl.className = "loading";
+            msgEl.innerText = "Signing in…";
+
+            try {
+                const res = await fetch("/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (data.status === "success") {
+                    msgEl.className = "success";
+                    msgEl.innerText = "Login successful! Redirecting…";
+                    localStorage.setItem("student_id", data.student_id);
+                    localStorage.setItem("program", data.program);
+                    setTimeout(() => { window.location.href = "/student_dashboard"; }, 1000);
+                } else {
+                    msgEl.className = "error";
+                    msgEl.innerText = data.message;
+                }
+            } catch {
+                msgEl.className = "error";
+                msgEl.innerText = "Server error. Please try again.";
+            }
+        });
+    </script>
+</body>
+</html>
