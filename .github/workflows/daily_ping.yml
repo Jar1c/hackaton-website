@@ -1,10 +1,10 @@
 # Simulated daily request to your render project so that the service doesn't go down
-name: Daily render ping
+name: Keep-Alive Render Ping
 
 on:
   schedule:
-    - cron: '0 16 * * *'  # Runs daily at midnight UTC
-  workflow_dispatch:  # Allows manual triggering
+    - cron: '*/14 * * * *'  # Tatakbo na ito tuwing ika-14 na minuto (24/7)
+  workflow_dispatch:      # Para pwede mong i-test manually sa GitHub Actions tab
 
 jobs:
   curl-website:
